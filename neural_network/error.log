@@ -1,0 +1,18 @@
+2023-08-03 11:22:35.496071: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: SSE4.1 SSE4.2 AVX AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+Traceback (most recent call last):
+  File "/home/kssepulveg/project/DeepLearningOpt/neural_network/CNN2.py", line 16, in <module>
+    bc = np.loadtxt('../../../neural_network/simp/results/bc.txt')
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kssepulveg/miniconda3/envs/optenv/lib/python3.11/site-packages/numpy/lib/npyio.py", line 1338, in loadtxt
+    arr = _read(fname, dtype=dtype, comment=comment, delimiter=delimiter,
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kssepulveg/miniconda3/envs/optenv/lib/python3.11/site-packages/numpy/lib/npyio.py", line 975, in _read
+    fh = np.lib._datasource.open(fname, 'rt', encoding=encoding)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kssepulveg/miniconda3/envs/optenv/lib/python3.11/site-packages/numpy/lib/_datasource.py", line 193, in open
+    return ds.open(path, mode, encoding=encoding, newline=newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/kssepulveg/miniconda3/envs/optenv/lib/python3.11/site-packages/numpy/lib/_datasource.py", line 533, in open
+    raise FileNotFoundError(f"{path} not found.")
+FileNotFoundError: ../../../neural_network/simp/results/bc.txt not found.

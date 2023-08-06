@@ -1,0 +1,2 @@
+2023-06-02 17:31:52,157 - INFO - Execution time: 577.554000139 seconds using topy library. [30 samples]
+2023-06-03 12:33:55,188 - INFO - Execution time: 541.462999821 seconds using topy library. [30 samples]
