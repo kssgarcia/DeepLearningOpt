@@ -16,4 +16,4 @@ source ~/miniconda3/bin/activate optenv
 
 cd /home/kssepulveg/project/DeepLearningOpt/neural_network
 
-python CNN2.py
+python CNN.py

@@ -12,7 +12,7 @@ from matplotlib import colors
 # Generate random input data
 input_shape = (61, 61)  # Input size of 61x61
 num_channels = 2  # Number of channels in each input array
-batch_size = 110  # Number of samples in each batch
+batch_size = 17690  # Number of samples in each batch
 
 # Create dummy input data
 bc = np.loadtxt('results_multi/bc.txt')
