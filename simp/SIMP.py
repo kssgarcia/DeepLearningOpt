@@ -42,7 +42,6 @@ sensi_rho = np.ones(ny*nx) # Initialize the sensitivity
 rho_old = rho.copy() # Initialize the density history
 d_c = np.ones(ny*nx) # Initialize the design change
 
-
 # Create and initialize channels
 bc = np.ones((nx + 1, ny + 1)) * volfrac
 bc[:, 0] = 1
