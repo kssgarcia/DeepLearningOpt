@@ -1,0 +1,10 @@
+.ipynb_checkpoints
+__pycache__/
+models
+**/weights1
+**/results_1f
+**/results_2f
+**/results_2f_2
+**/results_2f_3
+**/results_merge
+**/results_merge_2
