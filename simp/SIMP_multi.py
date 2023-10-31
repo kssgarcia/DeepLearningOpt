@@ -5,8 +5,8 @@ import time
 import numpy as np
 from scipy.sparse.linalg import spsolve
 import solidspy.assemutil as ass # Solidspy 1.1.0
-from beams import *
-from SIMP_utils import *
+from Utils.beams import *
+from Utils.SIMP_utils import *
 
 np.seterr(divide='ignore', invalid='ignore')
 

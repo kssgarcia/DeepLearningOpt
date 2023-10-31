@@ -7,8 +7,8 @@ import solidspy.assemutil as ass # Solidspy 1.1.0
 import matplotlib.pyplot as plt 
 from matplotlib import colors
 
-from beams import *
-from SIMP_utils import *
+from Utils.beams import *
+from Utils.SIMP_utils import *
 
 # Start the timer
 start_time = time.time()
