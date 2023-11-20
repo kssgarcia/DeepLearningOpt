@@ -9,15 +9,15 @@ import logging
 import matplotlib.pyplot as plt 
 from matplotlib import colors
 
-# Generate random input data
-input_shape = (61, 61)  # Input size of 61x61
-num_channels = 2  # Number of channels in each input array
-batch_size = 17690  # Number of samples in each batch
-
 # Create dummy input data
 bc = np.loadtxt('results_1f/bc.txt')
 load = np.loadtxt('results_1f/load.txt')
 output = np.loadtxt('results_1f/output.txt')
+
+# Generate random input data
+input_shape = (61, 61)  # Input size of 61x61
+num_channels = 2  # Number of channels in each input array
+batch_size = bc.shape[0]  # Number of samples in each batch
 
 input_data = np.zeros((batch_size,) + input_shape + (num_channels,))
 for i in range(batch_size):
