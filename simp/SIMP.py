@@ -91,13 +91,11 @@ def optimization(n_elem, r1, r2, volfrac):
         change = np.linalg.norm(rho.reshape(nx*ny,1)-rho_old.reshape(nx*ny,1),np.inf)
 
 
-    '''
     plt.ion() 
     fig,ax = plt.subplots()
     ax.imshow(-rho.reshape(n_elem,n_elem), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
     ax.set_title('Predicted')
     fig.show()
-    '''
 
 if __name__ == "__main__":
     optimization(60, 60, 1, 0.4)

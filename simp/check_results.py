@@ -4,9 +4,9 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 
 # Create dummy input data
-bc = np.loadtxt('results/bc.txt')
-load = np.loadtxt('results/load.txt')
-output = np.loadtxt('results/output.txt')
+bc = np.loadtxt('results_dist/bc.txt')
+load = np.loadtxt('results_dist/load.txt')
+output = np.loadtxt('results_dist/output.txt')
 
 # %%
 print(bc.shape)
