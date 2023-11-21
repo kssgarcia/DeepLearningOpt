@@ -15,7 +15,7 @@ np.seterr(divide='ignore', invalid='ignore')
 
 def n_rand(cantidad, rango_inferior, rango_superior):
     r =  np.array([random.uniform(rango_inferior, rango_superior) for _ in range(cantidad)])
-    return np.where(r == 0, 1e-5, r)
+    return np.where(r == 0, 1e-2, r)
 
 # Initialize variables
 length = 10

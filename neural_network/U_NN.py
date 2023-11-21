@@ -84,6 +84,7 @@ print("After Final:", output_tensor.shape)
 
 # Create the model
 model = Model(inputs=input_tensor, outputs=output_tensor)
+model.summary()
 
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 model.fit(input_data, output_data, epochs=2, batch_size=10)
