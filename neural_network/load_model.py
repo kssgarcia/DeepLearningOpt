@@ -6,9 +6,9 @@ import tensorflow as tf
 from simp_solver.SIMP import *
 
 # Create dummy input data
-bc = np.loadtxt('../simp/results_dist/bc.txt')
-load = np.loadtxt('../simp/results_dist/load.txt')
-output = np.loadtxt('../simp/results_dist/output.txt')
+bc = np.loadtxt('../simp/results_2f_3/bc.txt')
+load = np.loadtxt('../simp/results_2f_3/load.txt')
+output = np.loadtxt('../simp/results_2f_3/output.txt')
 
 # Generate random input data
 input_shape = (61, 61)  # Input size of 61x61
@@ -27,26 +27,11 @@ print("Input shape:", input_data.shape)
 print("Output shape:", output_train.shape)
 
 # %%
-model = tf.keras.models.load_model('../models/model_unet')
-y = model.predict(input_data)
-
-def custom_load(volfrac, r1, c1, r2, c2, l):
-    new_input = np.zeros((1,) + input_shape + (num_channels,))
-    bc = np.ones((60+1, 60+1)) * volfrac
-    bc[:, 0] = 1
-    load = np.zeros((60+1, 60+1), dtype=int)
-    load[-r1, -c1] = -l
-    load[-r2, -c2] = -l
-
-    new_input[0, :, :, 0] = bc
-    new_input[0, :, :, 1] = load
-
-    return new_input 
-
-# %%
-
-test_loss, test_accuracy = model.evaluate(input_data, output.reshape(output.shape[0], 60, 60).shape)
+model = tf.keras.models.load_model('../models/third_NN')
+test_loss, test_accuracy = model.evaluate(input_data[:2000], output.reshape(output.shape[0], 60, 60)[:2000])
 print(test_loss)
+#y = model.predict(input_data)
+
 # %%
 y_custom = model(custom_load(0.6,1,1, 61, 1, 1), False, None)
 

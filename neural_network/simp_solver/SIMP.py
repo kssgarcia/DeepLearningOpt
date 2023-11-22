@@ -90,5 +90,17 @@ def optimization(n_elem, r1, r2, volfrac):
         # Compute the change
         change = np.linalg.norm(rho.reshape(nx*ny,1)-rho_old.reshape(nx*ny,1),np.inf)
 
-
     return rho
+
+def custom_load(volfrac, r1, c1, r2, c2, l):
+    new_input = np.zeros((1,) + input_shape + (num_channels,))
+    bc = np.ones((60+1, 60+1)) * volfrac
+    bc[:, 0] = 1
+    load = np.zeros((60+1, 60+1), dtype=int)
+    load[-r1, -c1] = -l
+    load[-r2, -c2] = -l
+
+    new_input[0, :, :, 0] = bc
+    new_input[0, :, :, 1] = load
+
+    return new_input 

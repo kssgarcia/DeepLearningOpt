@@ -10,8 +10,9 @@ output = np.loadtxt('results_dist/output.txt')
 
 # %%
 print(bc.shape)
+index = 210
 plt.ion() 
 fig,ax = plt.subplots(1,2)
-ax[0].matshow(load[-1].reshape(61, 61), cmap='gray')
-ax[1].matshow(-np.flipud(output[-1].reshape(60, 60)), cmap='gray')
+ax[0].matshow(load[index].reshape(61, 61), cmap='gray')
+ax[1].matshow(-np.flipud(output[index].reshape(60, 60)), cmap='gray')
 fig.show()
