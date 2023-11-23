@@ -15,3 +15,13 @@
 - `results_2f_2` Folder with the data with just 2 force second part
 - `results_2f_3` Folder with the data with just 2 force third part
 - `results_merge_#` Folder with the data mix of all folders
+- `results_dist` Folder with the data of distribution loads
+
+
+### Model folder
+
+- `Basic_NN` Model more basic, don't work at all
+- `first_NN` Model with more data
+- `second_NN` Model with data of 2 loads
+- `third_NN` Model with data mix of merge results
+- `U_NN` U-Net model with data mix of merge results
