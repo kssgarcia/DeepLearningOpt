@@ -25,3 +25,4 @@
 - `second_NN` Model with data of 2 loads
 - `third_NN` Model with data mix of merge results
 - `U_NN` U-Net model with data mix of merge results
+- `U_NN2` U-Net model with data mix of merge results 50 epoch
