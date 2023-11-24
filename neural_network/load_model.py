@@ -13,14 +13,14 @@ output = np.loadtxt('../simp/results_merge_2/output.txt')
 
 # Generate random input data
 input_shape = (61, 61)  # Input size of 61x61
-num_channels = 3  # Number of channels in each input array
+num_channels = 2  # Number of channels in each input array
 batch_size = bc.shape[0]  # Number of samples in each batch
 
 input_data = np.zeros((batch_size,) + input_shape + (num_channels,))
 for i in range(batch_size):
     input_data[i, :, :, 0] = bc[i].reshape((61,61))
     input_data[i, :, :, 1] = load[i].reshape((61,61))
-    input_data[i, :, :, 2] = load[i].reshape((61,61))
+    #input_data[i, :, :, 2] = load[i].reshape((61,61))
 
 output_train = output.reshape(output.shape[0], 60, 60)
 
@@ -29,6 +29,7 @@ output_test = output_train[-1000:]
 
 # %%
 model = tf.keras.models.load_model('../models/U_NN2')
+model.summary()
 test_loss, test_accuracy = model.evaluate(input_test, output_test)
 print(test_loss)
 #y = model.predict(input_data)

@@ -6,41 +6,40 @@ from tensorflow.keras import layers
 import matplotlib.pyplot as plt
 
 # Create dummy input data
-bc = np.loadtxt('../simp/results_dist/bc.txt')
-load = np.loadtxt('../simp/results_dist/load.txt')
-vol = np.loadtxt('../simp/results_dist/vol.txt')
-output_tensor = np.loadtxt('../simp/results_dist/output.txt')
+bc = np.loadtxt('../simp/results_merge_2/bc.txt')
+load = np.loadtxt('../simp/results_merge_2/load.txt')
+#vol = np.loadtxt('../simp/results_merge_2/vol.txt')
+output = np.loadtxt('../simp/results_merge_2/output.txt')
 
 # Generate random input data
 input_shape = (61, 61)  # Input size of 61x61
-num_channels = 3  # Number of channels in each input array
+num_channels = 2  # Number of channels in each input array
 batch_size = bc.shape[0]  # Number of samples in each batch
 
-input_tensor = np.zeros((batch_size,) + input_shape + (num_channels,))
+input_data = np.zeros((batch_size,) + input_shape + (num_channels,))
 for i in range(batch_size):
-    input_tensor[i, :, :, 0] = bc[i].reshape((61,61))
-    input_tensor[i, :, :, 1] = load[i].reshape((61,61))
-    input_tensor[i, :, :, 1] = vol[i].reshape((61,61))
+    input_data[i, :, :, 0] = bc[i].reshape((61,61))
+    input_data[i, :, :, 1] = load[i].reshape((61,61))
+    #input_data[i, :, :, 2] = load[i].reshape((61,61))
 
-output_tensor = output_tensor.reshape((output_tensor.shape[0],60,60))
+output_train = output.reshape(output.shape[0], 60, 60, 1)
 
-x_train = input_tensor[:1000]
-y_train = output_tensor[:1000]
-x_test = input_tensor[:-1000]
-y_test = output_tensor[:-1000]
-# %%
+x_train = input_data[:-1000]
+y_train = output_train[:-1000]
+x_test = input_data[-1000:]
+y_test = output_train[-1000:]
 
 print(f"x_train shape: {x_train.shape} - y_train shape: {y_train.shape}")
 print(f"x_test shape: {x_test.shape} - y_test shape: {y_test.shape}")
 
 num_classes = 100
-input_shape = (61, 61, 3)
+input_shape = (61, 61, 2)
 
 learning_rate = 0.001
 weight_decay = 0.0001
 num_epochs = 100
 image_size = 60  # We'll resize input images to this size
-patch_size = 6  # Size of the patches to be extract from the input images
+patch_size = 10  # Size of the patches to be extract from the input images
 num_patches = (image_size // patch_size) ** 2
 projection_dim = 64
 num_heads = 4
@@ -73,6 +72,7 @@ class Patches(layers.Layer):
             padding="VALID",
         )
         patch_dims = patches.shape[-1]
+        print(patches.shape)
         patches = tf.reshape(patches, [batch_size, -1, patch_dims])
         return patches
 
@@ -122,11 +122,25 @@ def create_vit_classifier():
 
     dense_output = layers.Dense(1, activation='relu')(features)
 
-    resize = tf.reshape(dense_output, [-1, 10,  10])
-    #output_tensor = layers.Conv2D(1, (1, 1), activation='sigmoid')(features)
-    #output = layers.LayerNormalization(epsilon=1e-6)(resize)
-    # Create the Keras model.
-    model = keras.Model(inputs=inputs, outputs=resize)
+    resize1 = tf.reshape(dense_output, [-1, 6, 6, 1])
+
+    # Decoding Blocks
+    def decoding_block(input_layer, filters):
+        if input_layer.shape[1] == 6:
+            x = layers.Conv2DTranspose(filters, (5, 5), strides=(5,5), activation='relu', padding='same')(input_layer)
+        else:
+            x = layers.Conv2DTranspose(filters, (2, 2), strides=(2, 2), activation='relu', padding='same')(input_layer)
+        x = layers.BatchNormalization()(x)
+        x = layers.Conv2D(filters, (3, 3), activation='relu', padding='same')(x)
+        x = layers.BatchNormalization()(x)
+        return x
+
+    decoded1 = decoding_block(resize1, filters=64)
+    decoded2 = decoding_block(decoded1, filters=32)
+
+    output_tensor = layers.Conv2D(1, (1, 1), activation='sigmoid')(decoded2)
+
+    model = keras.Model(inputs=inputs, outputs=output_tensor)
     model.summary()
     return model
 
