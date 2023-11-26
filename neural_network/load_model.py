@@ -28,16 +28,16 @@ input_test = input_data[-1000:]
 output_test = output_train[-1000:]
 
 # %%
-model = tf.keras.models.load_model('../models/U_NN2')
+model = tf.keras.models.load_model('../models/ViT_test')
 model.summary()
 test_loss, test_accuracy = model.evaluate(input_test, output_test)
 print(test_loss)
-#y = model.predict(input_data)
+y = model.predict(input_data)
 
 # %%
 #y_custom = model(custom_load(0.6,1,1, 61, 1, 1), False, None)
 
-index = 100
+index = 200
 plt.ion() 
 fig,ax = plt.subplots(1,3)
 ax[0].imshow(np.flipud(np.array(-y[index]).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))

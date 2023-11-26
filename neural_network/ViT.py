@@ -32,6 +32,8 @@ y_test = output_train[-1000:]
 print(f"x_train shape: {x_train.shape} - y_train shape: {y_train.shape}")
 print(f"x_test shape: {x_test.shape} - y_test shape: {y_test.shape}")
 
+# %%
+
 num_classes = 100
 input_shape = (61, 61, 2)
 
@@ -72,8 +74,8 @@ class Patches(layers.Layer):
             padding="VALID",
         )
         patch_dims = patches.shape[-1]
-        print(patches.shape)
-        patches = tf.reshape(patches, [batch_size, -1, patch_dims])
+        H = patches.shape[1]
+        patches = tf.reshape(patches, [batch_size, H*H, patch_dims])
         return patches
 
 class PatchEncoder(layers.Layer):
@@ -90,9 +92,19 @@ class PatchEncoder(layers.Layer):
         encoded = self.projection(patch) + self.position_embedding(positions)
         return encoded
 
+def decoding_block(input_layer, filters):
+    if input_layer.shape[1] == 6:
+        x = layers.Conv2DTranspose(filters, (5, 5), strides=(5,5), activation='relu', padding='same')(input_layer)
+    else:
+        x = layers.Conv2DTranspose(filters, (2, 2), strides=(2, 2), activation='relu', padding='same')(input_layer)
+    x = layers.BatchNormalization()(x)
+    x = layers.Conv2D(filters, (3, 3), activation='relu', padding='same')(x)
+    x = layers.BatchNormalization()(x)
+    return x
+
 def create_vit_classifier():
     inputs = layers.Input(shape=input_shape)
-    initial = layers.Conv2D(3, kernel_size=(2, 2), activation='relu', padding='valid')(inputs)
+    initial = layers.Conv2D(2, kernel_size=(2, 2), activation='relu', padding='valid')(inputs)
     # Create patches.
     patches = Patches(patch_size)(initial)
     # Encode patches.
@@ -117,23 +129,8 @@ def create_vit_classifier():
 
     # Create a [batch_size, projection_dim] tensor.
     representation = layers.LayerNormalization(epsilon=1e-6)(encoded_patches)
-    # Add MLP.
-    features = mlp(representation, hidden_units=mlp_head_units, dropout_rate=0.5)
 
-    dense_output = layers.Dense(1, activation='relu')(features)
-
-    resize1 = tf.reshape(dense_output, [-1, 6, 6, 1])
-
-    # Decoding Blocks
-    def decoding_block(input_layer, filters):
-        if input_layer.shape[1] == 6:
-            x = layers.Conv2DTranspose(filters, (5, 5), strides=(5,5), activation='relu', padding='same')(input_layer)
-        else:
-            x = layers.Conv2DTranspose(filters, (2, 2), strides=(2, 2), activation='relu', padding='same')(input_layer)
-        x = layers.BatchNormalization()(x)
-        x = layers.Conv2D(filters, (3, 3), activation='relu', padding='same')(x)
-        x = layers.BatchNormalization()(x)
-        return x
+    resize1 = tf.reshape(representation, [-1, 6, 6, projection_dim])
 
     decoded1 = decoding_block(resize1, filters=64)
     decoded2 = decoding_block(decoded1, filters=32)
@@ -141,7 +138,7 @@ def create_vit_classifier():
     output_tensor = layers.Conv2D(1, (1, 1), activation='sigmoid')(decoded2)
 
     model = keras.Model(inputs=inputs, outputs=output_tensor)
-    model.summary()
+    #model.summary()
     return model
 
 def run_experiment(model):
@@ -169,5 +166,9 @@ model = create_vit_classifier()
 #history = run_experiment(vit_classifier)
 
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-model.fit(x_train, y_train, epochs=2, batch_size=10)
+model.fit(x_train, y_train, epochs=1, batch_size=10)
 
+
+# %%
+
+model.save('../models/ViT_test')
