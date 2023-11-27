@@ -10,9 +10,9 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 
 # Create dummy input data
-bc = np.loadtxt('results_1f/bc.txt')
-load = np.loadtxt('results_1f/load.txt')
-output = np.loadtxt('results_1f/output.txt')
+bc = np.loadtxt('results_merge/bc.txt')
+load = np.loadtxt('results_merge/load.txt')
+output = np.loadtxt('results_merge/output.txt')
 
 # Generate random input data
 input_shape = (61, 61)  # Input size of 61x61
@@ -60,14 +60,17 @@ model.add(Dense(3600, activation='sigmoid'))
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
 # Define the checkpoint callback
+'''
 model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
         filepath='/weights/weight.h5',
         save_weights_only=True,   # Set to False to save the entire model (including architecture)
         save_freq='epoch'
 )
+'''
 
 # Train
-model.fit(input_data, output, epochs=2, batch_size=10, callbacks=[model_checkpoint_callback])
+#model.fit(input_data, output, epochs=2, batch_size=10, callbacks=[model_checkpoint_callback])
+model.fit(input_data, output, epochs=2, batch_size=10)
 
 # Save the model
 model.save('../models/time_test')
@@ -80,12 +83,13 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logging.info(f"Trainning time: {trainnig_time} seconds.")
 
 # %%
+
 y = model.predict(input_data)
 test_loss, test_accuracy = model.evaluate(input_data, output)
 print("Output shape:", y.shape)
 
-# %%
 '''
+# %%
 plt.ion() 
 fig,ax = plt.subplots(1,2)
 ax[0].imshow(-y[1].reshape(60, 60), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))

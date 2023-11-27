@@ -1,29 +1,35 @@
 # %%
 import numpy as np
+import time
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Conv2D, BatchNormalization, MaxPooling2D, concatenate, Conv2DTranspose
 
 # Create dummy input data
-bc = np.loadtxt('results_1f/bc.txt')
-load = np.loadtxt('results_1f/load.txt')
-output_tensor = np.loadtxt('results_1f/output.txt')
+bc = np.loadtxt('results_merge_2/bc.txt')
+load = np.loadtxt('results_merge_2/load.txt')
+output = np.loadtxt('results_merge_2/output.txt')
 
 # Generate random input data
 input_shape = (61, 61)  # Input size of 61x61
 num_channels = 2  # Number of channels in each input array
 batch_size = bc.shape[0]  # Number of samples in each batch
 
-input_tensor = np.zeros((batch_size,) + input_shape + (num_channels,))
+input_data = np.zeros((batch_size,) + input_shape + (num_channels,))
 for i in range(batch_size):
-    input_tensor[i, :, :, 0] = bc[i].reshape((61,61))
-    input_tensor[i, :, :, 1] = load[i].reshape((61,61))
+    input_data[i, :, :, 0] = bc[i].reshape((61,61))
+    input_data[i, :, :, 1] = load[i].reshape((61,61))
+    #input_data[i, :, :, 2] = vol[i].reshape((61,61))
 
-output_tensor = output_tensor.reshape((output_tensor.shape[0],60,60))
+output_data = output.reshape((output.shape[0],60,60))
 
-input_data = input_tensor[:10]
-output_data = output_tensor[:10]
+input_train = input_data[:-1000]
+output_train = output_data[:-1000]
 
-# %%
+input_test = input_data[-1000:]
+output_test = output_data[-1000:]
+
+# Start the timer
+start_time = time.perf_counter()
 
 # Input layer
 input_tensor = Input(shape=(61, 61, num_channels))
@@ -87,4 +93,10 @@ model = Model(inputs=input_tensor, outputs=output_tensor)
 model.summary()
 
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-model.fit(input_data, output_data, epochs=2, batch_size=10)
+model.fit(input_train, output_train, epochs=50, batch_size=10)
+
+# Save the model
+model.save('../models/model_unet')
+end_time = time.perf_counter()
+trainnig_time = end_time - start_time
+print(trainnig_time)

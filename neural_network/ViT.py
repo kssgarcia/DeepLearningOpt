@@ -6,10 +6,10 @@ from tensorflow.keras import layers
 import matplotlib.pyplot as plt
 
 # Create dummy input data
-bc = np.loadtxt('../simp/results_merge_2/bc.txt')
-load = np.loadtxt('../simp/results_merge_2/load.txt')
+bc = np.loadtxt('results_merge_2/bc.txt')
+load = np.loadtxt('results_merge_2/load.txt')
 #vol = np.loadtxt('../simp/results_merge_2/vol.txt')
-output = np.loadtxt('../simp/results_merge_2/output.txt')
+output = np.loadtxt('results_merge_2/output.txt')
 
 # Generate random input data
 input_shape = (61, 61)  # Input size of 61x61
@@ -44,13 +44,12 @@ image_size = 60  # We'll resize input images to this size
 patch_size = 10  # Size of the patches to be extract from the input images
 num_patches = (image_size // patch_size) ** 2
 projection_dim = 64
-num_heads = 4
+num_heads = 12
 transformer_units = [
     projection_dim * 2,
     projection_dim,
 ]  # Size of the transformer layers
-transformer_layers = 8
-mlp_head_units = [2048, 1024]  # Size of the dense layers of the final classifier
+transformer_layers = 15
 
 
 def mlp(x, hidden_units, dropout_rate):
@@ -166,9 +165,5 @@ model = create_vit_classifier()
 #history = run_experiment(vit_classifier)
 
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-model.fit(x_train, y_train, epochs=1, batch_size=10)
-
-
-# %%
-
-model.save('../models/ViT_test')
+model.fit(x_train, y_train, epochs=50, batch_size=10)
+model.save('../models/ViT3')
