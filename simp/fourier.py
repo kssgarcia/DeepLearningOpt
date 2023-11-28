@@ -1,7 +1,8 @@
 # %%
+from os import path, makedirs
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.fft import fft2, fftshift
+from scipy.fft import fft2, ifft2, fftshift, ifftshift
 
 # Cargar la imagen en escala de grises
 # Create dummy input data
@@ -25,16 +26,48 @@ output_test = output_train[-1000:]
 # %%
 
 # Aplicar la transformada de Fourier bidimensional
-img_fft = fft2(output_train)
-img_fft_shifted = fftshift(img_fft)  # Centrar la frecuencia cero
-print(img_fft_shifted.shape)
-print(img_fft.shape)
+#inputbc_ff = fftshift(fft2(bc))
+#inputload_ff = fftshift(fft2(load))
+output_ff = fftshift(fft2(output_train))
+print(output_ff)
+
+#inputbc_rec = ifft2(ifftshift(output_ff))
+#inputload_rec = ifft2(ifftshift(output_ff))
+#output_rec = ifft2(ifftshift(output_ff))
+# %%
+# Save data
+dir = './results_merge_2'
+if not path.exists(dir): makedirs(dir)
+np.savetxt(dir + '/fourier.txt', np.array(output_ff.flatten()), fmt='%.3f')
 
 # %%
-# Visualizar la imagen original y su transformada de Fourier
-index = 0
-plt.subplot(121), plt.imshow(output_train[index], cmap='gray')
+index = 10
+plt.subplot(131), plt.imshow(-bc[index].reshape((61,61)), cmap='gray')
 plt.title('Imagen Original'), plt.xticks([]), plt.yticks([])
-plt.subplot(122), plt.imshow(np.log(1 + np.abs(img_fft_shifted[index])), cmap='gray')
+plt.subplot(132), plt.imshow(np.log(1 + np.abs(inputbc_ff[index].reshape((61,61)))), cmap='gray')
 plt.title('Transformada de Fourier'), plt.xticks([]), plt.yticks([])
+plt.subplot(133), plt.imshow(-np.abs(inputbc_rec[index]), cmap='gray')
+plt.title('Reconstructed'), plt.xticks([]), plt.yticks([])
+plt.show()
+
+# %%
+index = 10
+plt.subplot(131), plt.imshow(-load[index], cmap='gray')
+plt.title('Imagen Original'), plt.xticks([]), plt.yticks([])
+plt.subplot(132), plt.imshow(np.log(1 + np.abs(inputload_ff[index])), cmap='gray')
+plt.title('Transformada de Fourier'), plt.xticks([]), plt.yticks([])
+plt.subplot(133), plt.imshow(-np.abs(inputload_rec[index]), cmap='gray')
+plt.title('Reconstructed'), plt.xticks([]), plt.yticks([])
+plt.show()
+
+# %%
+
+# Visualizar la imagen original y su transformada de Fourier
+index = 10
+plt.subplot(131), plt.imshow(-output_train[index], cmap='gray')
+plt.title('Imagen Original'), plt.xticks([]), plt.yticks([])
+plt.subplot(132), plt.imshow(np.log(1 + np.abs(output_ff[index])), cmap='gray')
+plt.title('Transformada de Fourier'), plt.xticks([]), plt.yticks([])
+plt.subplot(133), plt.imshow(-np.abs(output_rec[index]), cmap='gray')
+plt.title('Reconstructed'), plt.xticks([]), plt.yticks([])
 plt.show()

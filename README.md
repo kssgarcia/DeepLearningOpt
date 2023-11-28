@@ -28,3 +28,4 @@
 - `U_NN2` U-Net model with data mix of merge results 50 epoch
 - `ViT_test` ViT model with data mix of merge results 50 epoch wrong data
 - `ViT2` ViT model with data mix of merge 2 results 50 epoch
+- `ViT3` ViT model with more parameters 8M approx 50 epoch

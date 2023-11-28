@@ -5,8 +5,6 @@ from matplotlib import colors
 import tensorflow as tf
 from simp_solver.SIMP import *
 
-# %%
-
 # Create dummy input data
 bc = np.loadtxt('../simp/results_merge_2/bc.txt')
 load = np.loadtxt('../simp/results_merge_2/load.txt')
@@ -30,13 +28,14 @@ input_test = input_data[-1000:]
 output_test = output_train[-1000:]
 
 # %%
-model = tf.keras.models.load_model('../models/U_NN2')
+model = tf.keras.models.load_model('../models/ViT3')
 model.summary()
 
 # %%
-
 test_loss, test_accuracy = model.evaluate(input_test, output_test)
 print(test_loss)
+
+# %%
 y = model.predict(input_data)
 
 # %%
