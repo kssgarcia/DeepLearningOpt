@@ -1,14 +1,15 @@
 # %%
+import os
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 
 # Create dummy input data
-bc = np.loadtxt('results_merge_2/bc.txt')
-load = np.loadtxt('results_merge_2/load.txt')
+bc = np.loadtxt('../simp/results_merge_2/bc.txt')
+load = np.loadtxt('../simp/results_merge_2/load.txt')
 #vol = np.loadtxt('../simp/results_merge_2/vol.txt')
-output = np.loadtxt('results_merge_2/output.txt')
+output = np.loadtxt('../simp/results_merge_2/output.txt')
 
 # Generate random input data
 input_shape = (61, 61)  # Input size of 61x61
@@ -27,6 +28,8 @@ x_train = input_data[:-1000]
 y_train = output_train[:-1000]
 x_test = input_data[-1000:]
 y_test = output_train[-1000:]
+
+batch_size = x_train.shape[0]
 
 print(f"x_train shape: {x_train.shape} - y_train shape: {y_train.shape}")
 print(f"x_test shape: {x_test.shape} - y_test shape: {y_test.shape}")
@@ -136,33 +139,19 @@ def create_vit_classifier():
     output_tensor = layers.Conv2D(1, (1, 1), activation='sigmoid')(decoded2)
 
     model = keras.Model(inputs=inputs, outputs=output_tensor)
-    #model.summary()
+    model.summary()
     return model
 
-def run_experiment(model):
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-
-    checkpoint_filepath = "/tmp/checkpoint"
-    checkpoint_callback = keras.callbacks.ModelCheckpoint(
-        checkpoint_filepath,
-        monitor="val_accuracy",
-        save_best_only=True,
-        save_weights_only=True,
-    )
-
-    history = model.fit(x_train, y_train, epochs=2, batch_size=10)
-
-    model.load_weights(checkpoint_filepath)
-    _, accuracy, top_5_accuracy = model.evaluate(x_test, y_test)
-    print(f"Test accuracy: {round(accuracy * 100, 2)}%")
-    print(f"Test top 5 accuracy: {round(top_5_accuracy * 100, 2)}%")
-
-    return history
-
-
 model = create_vit_classifier()
-#history = run_experiment(vit_classifier)
+
+checkpoint_callback = keras.callbacks.ModelCheckpoint(
+    './best/cp.ckpt',
+    monitor="val_accuracy",
+    mode="max",
+    save_best_only=True,
+    save_weights_only=True,
+    verbose= 1,
+)
 
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-model.fit(x_train, y_train, epochs=50, batch_size=10)
-model.save('../models/ViT3')
+model.fit(x_test, y_test, epochs=5, batch_size=10,validation_split=0.1, callbacks=[checkpoint_callback])

@@ -1,6 +1,6 @@
 # %%
 import numpy as np
-import time
+from tensorflow import keras
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Conv2D, BatchNormalization, MaxPooling2D, concatenate, Conv2DTranspose
 
@@ -27,9 +27,6 @@ output_train = output_data[:-1000]
 
 input_test = input_data[-1000:]
 output_test = output_data[-1000:]
-
-# Start the timer
-start_time = time.perf_counter()
 
 # Input layer
 input_tensor = Input(shape=(61, 61, num_channels))
@@ -92,11 +89,17 @@ print("After Final:", output_tensor.shape)
 model = Model(inputs=input_tensor, outputs=output_tensor)
 model.summary()
 
+checkpoint_callback = keras.callbacks.ModelCheckpoint(
+    './best/cp.ckpt',
+    monitor="val_accuracy",
+    mode="max",
+    save_best_only=True,
+    save_weights_only=True,
+    verbose= 1,
+)
+
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-model.fit(input_train, output_train, epochs=50, batch_size=10)
+model.fit(input_train, input_train, epochs=5, batch_size=10,validation_split=0.1, callbacks=[checkpoint_callback])
 
 # Save the model
 model.save('../models/model_unet')
-end_time = time.perf_counter()
-trainnig_time = end_time - start_time
-print(trainnig_time)
