@@ -103,7 +103,7 @@ def decoding_block(input_layer, filters):
     x = layers.BatchNormalization()(x)
     return x
 
-def create_vit_classifier():
+def ViT_model():
     inputs = layers.Input(shape=input_shape)
     initial = layers.Conv2D(2, kernel_size=(2, 2), activation='relu', padding='valid')(inputs)
     # Create patches.
@@ -142,7 +142,7 @@ def create_vit_classifier():
     model.summary()
     return model
 
-model = create_vit_classifier()
+model = ViT_model()
 
 checkpoint_callback = keras.callbacks.ModelCheckpoint(
     './best/cp.ckpt',
@@ -155,3 +155,5 @@ checkpoint_callback = keras.callbacks.ModelCheckpoint(
 
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 model.fit(x_test, y_test, epochs=5, batch_size=10,validation_split=0.1, callbacks=[checkpoint_callback])
+
+# %%

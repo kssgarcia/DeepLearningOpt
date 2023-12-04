@@ -11,9 +11,9 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 
 # Create dummy input data
-bc = np.loadtxt('results_merge_2/bc.txt')
-load = np.loadtxt('results_merge_2/load.txt')
-output = np.loadtxt('results_merge_2/output.txt')
+bc = np.loadtxt('../simp/results_merge_2/bc.txt')
+load = np.loadtxt('../simp/results_merge_2/load.txt')
+output = np.loadtxt('../simp/results_merge_2/output.txt')
 
 # Generate random input data
 input_shape = (61, 61)  # Input size of 61x61
@@ -38,30 +38,35 @@ output_test = output_data[-1000:]
 # Start the timer
 start_time = time.perf_counter()
 
-model = Sequential()
+def CNN_model():
+    model = Sequential()
 
-# Layers down-sampling
-model.add(Conv2D(32, (3, 3), activation='relu', padding='same', input_shape=(61, 61, num_channels)))
-model.add(MaxPooling2D((2, 2)))
-model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
-model.add(MaxPooling2D((2, 2)))
-model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
-model.add(MaxPooling2D((2, 2)))
+    # Layers down-sampling
+    model.add(Conv2D(32, (3, 3), activation='relu', padding='same', input_shape=(61, 61, num_channels)))
+    model.add(MaxPooling2D((2, 2)))
+    model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
+    model.add(MaxPooling2D((2, 2)))
+    model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
+    model.add(MaxPooling2D((2, 2)))
 
-# Upsampling layers
-model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
-model.add(UpSampling2D((2, 2)))
-model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
-model.add(UpSampling2D((2, 2)))
-model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
-model.add(UpSampling2D((2, 2)))
+    # Upsampling layers
+    model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
+    model.add(UpSampling2D((2, 2)))
+    model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
+    model.add(UpSampling2D((2, 2)))
+    model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
+    model.add(UpSampling2D((2, 2)))
 
-# Flatten layer
-model.add(Flatten())
+    # Flatten layer
+    model.add(Flatten())
 
-# Output layer
-model.add(Dense(3600, activation='sigmoid'))
+    # Output layer
+    model.add(Dense(3600, activation='sigmoid'))
+    return model
+
+model = CNN_model()
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+model.summary()
 
 checkpoint_callback = keras.callbacks.ModelCheckpoint(
     './best/cp.ckpt',

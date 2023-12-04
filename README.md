@@ -29,3 +29,5 @@
 - `ViT_test` ViT model with data mix of merge results 50 epoch wrong data
 - `ViT2` ViT model with data mix of merge 2 results 50 epoch
 - `ViT3` ViT model with more parameters 8M approx 50 epoch
+- `vit_last_100` ViT model with 100 epoch batch size small
+- `unn_last_100` U-Net model with 100 epoch batch size small

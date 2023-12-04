@@ -5,9 +5,10 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Conv2D, BatchNormalization, MaxPooling2D, concatenate, Conv2DTranspose
 
 # Create dummy input data
-bc = np.loadtxt('results_merge_2/bc.txt')
-load = np.loadtxt('results_merge_2/load.txt')
-output = np.loadtxt('results_merge_2/output.txt')
+bc = np.loadtxt('../simp/results_merge_2/bc.txt')
+load = np.loadtxt('../simp/results_merge_2/load.txt')
+#vol = np.loadtxt('../simp/results_merge_2/vol.txt')
+output = np.loadtxt('../simp/results_merge_2/output.txt')
 
 # Generate random input data
 input_shape = (61, 61)  # Input size of 61x61
@@ -28,66 +29,71 @@ output_train = output_data[:-1000]
 input_test = input_data[-1000:]
 output_test = output_data[-1000:]
 
-# Input layer
-input_tensor = Input(shape=(61, 61, num_channels))
-print("After Initial Convolution:", input_tensor.shape)
 
-# Initial Convolution Layer (No Padding)
-initial = Conv2D(32, kernel_size=(2, 2), activation='relu', padding='valid')(input_tensor)
-initial = BatchNormalization()(initial)
+def UNN_model():
+    # Input layer
+    input_tensor = Input(shape=(61, 61, num_channels))
+    print("After Initial Convolution:", input_tensor.shape)
 
-# Encoding Blocks
-def encoding_block(input_layer, filters):
-    x = Conv2D(filters, (3, 3), activation='relu', padding='same')(input_layer)
+    # Initial Convolution Layer (No Padding)
+    initial = Conv2D(32, kernel_size=(2, 2), activation='relu', padding='valid')(input_tensor)
+    initial = BatchNormalization()(initial)
+
+    # Encoding Blocks
+    def encoding_block(input_layer, filters):
+        x = Conv2D(filters, (3, 3), activation='relu', padding='same')(input_layer)
+        x = BatchNormalization()(x)
+        x = Conv2D(filters, (3, 3), activation='relu', padding='same')(x)
+        x = BatchNormalization()(x)
+        if x.shape[1] == 15:
+            encoded = MaxPooling2D((3, 3))(x)
+        else:
+            encoded = MaxPooling2D((2, 2))(x)
+        return encoded
+
+    encoded1 = encoding_block(initial, filters=64)
+    encoded2 = encoding_block(encoded1, filters=128)
+    encoded3 = encoding_block(encoded2, filters=256)
+
+    # Additional Convolution Layers for Feature Maps
+    x = Conv2D(256, kernel_size=(7, 7), activation='relu', padding='same')(encoded3)
     x = BatchNormalization()(x)
-    x = Conv2D(filters, (3, 3), activation='relu', padding='same')(x)
+    x = Conv2D(256, kernel_size=(7, 7), activation='relu', padding='same')(x)
     x = BatchNormalization()(x)
-    if x.shape[1] == 15:
-        encoded = MaxPooling2D((3, 3))(x)
-    else:
-        encoded = MaxPooling2D((2, 2))(x)
-    return encoded
 
-encoded1 = encoding_block(initial, filters=64)
-encoded2 = encoding_block(encoded1, filters=128)
-encoded3 = encoding_block(encoded2, filters=256)
+    # Decoding Blocks
+    def decoding_block(input_layer, concat_layer, filters):
+        x = concatenate([input_layer, concat_layer], axis=-1)
+        if x.shape[1] == 5:
+            x = Conv2DTranspose(filters, (3, 3), strides=(3,3), activation='relu', padding='same')(x)
+        else:
+            x = Conv2DTranspose(filters, (2, 2), strides=(2,2), activation='relu', padding='same')(x)
+        x = BatchNormalization()(x)
+        x = Conv2D(filters, (3, 3), activation='relu', padding='same')(x)
+        x = BatchNormalization()(x)
+        return x
 
-# Additional Convolution Layers for Feature Maps
-x = Conv2D(256, kernel_size=(7, 7), activation='relu', padding='same')(encoded3)
-x = BatchNormalization()(x)
-x = Conv2D(256, kernel_size=(7, 7), activation='relu', padding='same')(x)
-x = BatchNormalization()(x)
+    decoded1 = decoding_block(x, encoded3, filters=128)
+    decoded2 = decoding_block(decoded1, encoded2, filters=64)
+    decoded3 = decoding_block(decoded2, encoded1, filters=32)
 
-# Decoding Blocks
-def decoding_block(input_layer, concat_layer, filters):
-    x = concatenate([input_layer, concat_layer], axis=-1)
-    if x.shape[1] == 5:
-        x = Conv2DTranspose(filters, (3, 3), strides=(3,3), activation='relu', padding='same')(x)
-    else:
-        x = Conv2DTranspose(filters, (2, 2), strides=(2,2), activation='relu', padding='same')(x)
+    # Final Convolution Layers for Element Solution
+    x = concatenate([decoded3, initial], axis=-1)
+    x = Conv2D(32, kernel_size=(7, 7), activation='relu', padding='same')(x)
     x = BatchNormalization()(x)
-    x = Conv2D(filters, (3, 3), activation='relu', padding='same')(x)
+    x = Conv2D(32, kernel_size=(7, 7), activation='relu', padding='same')(x)
     x = BatchNormalization()(x)
-    return x
 
-decoded1 = decoding_block(x, encoded3, filters=128)
-decoded2 = decoding_block(decoded1, encoded2, filters=64)
-decoded3 = decoding_block(decoded2, encoded1, filters=32)
+    # Output layer with Sigmoid activation for binary classification
+    output_tensor = Conv2D(1, (1, 1), activation='sigmoid')(x)
+    print("After Final:", output_tensor.shape)
 
-# Final Convolution Layers for Element Solution
-x = concatenate([decoded3, initial], axis=-1)
-x = Conv2D(32, kernel_size=(7, 7), activation='relu', padding='same')(x)
-x = BatchNormalization()(x)
-x = Conv2D(32, kernel_size=(7, 7), activation='relu', padding='same')(x)
-x = BatchNormalization()(x)
+    # Create the model
+    model = Model(inputs=input_tensor, outputs=output_tensor)
+    model.summary()
+    return model
 
-# Output layer with Sigmoid activation for binary classification
-output_tensor = Conv2D(1, (1, 1), activation='sigmoid')(x)
-print("After Final:", output_tensor.shape)
-
-# Create the model
-model = Model(inputs=input_tensor, outputs=output_tensor)
-model.summary()
+model = UNN_model()
 
 checkpoint_callback = keras.callbacks.ModelCheckpoint(
     './best/cp.ckpt',
