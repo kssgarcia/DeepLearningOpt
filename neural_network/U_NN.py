@@ -29,7 +29,6 @@ output_train = output_data[:-1000]
 input_test = input_data[-1000:]
 output_test = output_data[-1000:]
 
-
 def UNN_model():
     # Input layer
     input_tensor = Input(shape=(61, 61, num_channels))
@@ -105,7 +104,7 @@ checkpoint_callback = keras.callbacks.ModelCheckpoint(
 )
 
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-model.fit(input_train, input_train, epochs=5, batch_size=10,validation_split=0.1, callbacks=[checkpoint_callback])
+model.fit(input_train, output_train, epochs=5, batch_size=10, validation_split=0.1, callbacks=[checkpoint_callback])
 
 # Save the model
 model.save('../models/model_unet')
