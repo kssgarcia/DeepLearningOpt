@@ -93,6 +93,7 @@ def UNN_model():
     return model
 
 model = UNN_model()
+# %%
 
 checkpoint_callback = keras.callbacks.ModelCheckpoint(
     './best/cp.ckpt',
@@ -104,7 +105,7 @@ checkpoint_callback = keras.callbacks.ModelCheckpoint(
 )
 
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-model.fit(input_train, output_train, epochs=5, batch_size=10, validation_split=0.1, callbacks=[checkpoint_callback])
+model.fit(input_test, output_test, epochs=10, batch_size=10, validation_split=0.1, callbacks=[checkpoint_callback])
 
 # Save the model
 model.save('../models/model_unet')
