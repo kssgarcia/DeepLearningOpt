@@ -37,12 +37,12 @@ test_loss, test_accuracy = model.evaluate(input_test, output_test)
 print(test_loss)
 
 # %%
-y = model.predict(input_data)
+y = model.predict(input_test)
 
 # %%
-#y_custom = model(custom_load(0.6,1,1, 61, 1, 1), False, None)
+y_custom = model(custom_load(0.6,1,1, 61, 1, 1), False, None)
 
-index = 100
+index = 300
 plt.ion() 
 fig,ax = plt.subplots(1,3)
 ax[0].imshow(np.flipud(np.array(-y[index]).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
@@ -50,7 +50,7 @@ ax[0].imshow(np.flipud(np.array(-y[index]).reshape(60, 60)), cmap='gray', interp
 ax[0].set_title('Predicted')
 ax[0].set_xticks([])
 ax[0].set_yticks([])
-ax[1].matshow(-np.flipud(output[index].reshape(60, 60)), cmap='gray')
+ax[1].matshow(-np.flipud(output_test[index].reshape(60, 60)), cmap='gray')
 #ax[1].imshow(-optimization(60, 61, 1, 0.6).reshape(60, 60), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
 ax[1].set_title('Expected')
 ax[1].set_xticks([])

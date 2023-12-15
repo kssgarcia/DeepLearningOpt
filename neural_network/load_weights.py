@@ -49,7 +49,6 @@ model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy']
 # Load the saved weights
 model.load_weights('./weights/weights_epoch_07.h5')
 
-
 # Continue training with the new data
 model.fit(input_data, output, epochs=3, batch_size=1)
 
