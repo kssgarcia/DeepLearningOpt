@@ -46,21 +46,23 @@ def custom_load(volfrac, r1, c1, r2, c2, l):
     bc[:, 0] = 1
     load = np.zeros((60+1, 60+1), dtype=int)
     load[-r1, -c1] = l
-    load[-r2, -c2] = -l
-    print(load)
+    load[-r2, -c2] = l
 
     new_input[0, :, :, 0] = bc
     new_input[0, :, :, 1] = load
+    print(np.where(load==-1))
 
     return new_input 
 
-y_custom = model(custom_load(0.6, 1, 60, 61, 60, 1))
+y_custom = model.predict(custom_load(0.6,1,1, 61, 1, 1))
+print(y_custom.shape)
+print(input_test.shape)
 
 index = 300
 plt.ion() 
 fig,ax = plt.subplots(1,3)
 #ax[0].imshow(np.flipud(np.array(-y[index]).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
-ax[0].imshow(np.flipud(np.array(y_custom).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
+ax[0].imshow(np.array(y_custom).reshape(60, 60), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
 ax[0].set_title('Predicted')
 ax[0].set_xticks([])
 ax[0].set_yticks([])
