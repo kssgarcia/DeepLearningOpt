@@ -1,9 +1,9 @@
-
 # %%
 import numpy as np
 import matplotlib.pyplot as plt 
 from matplotlib import colors
 import tensorflow as tf
+from simp_solver.SIMP import optimization
 
 # Create dummy input data
 bc = np.loadtxt('../simp/results_merge_2/bc.txt')
@@ -28,7 +28,7 @@ input_test = input_data[-1000:]
 output_test = output_train[-1000:]
 
 # %%
-model = tf.keras.models.load_model('../models/unn_last_100')
+model = tf.keras.models.load_model('../models/U_NN2')
 #model = tf.keras.models.load_model('../models/vit_last_100')
 model.summary()
 
@@ -40,18 +40,32 @@ print(test_loss)
 y = model.predict(input_test)
 
 # %%
-y_custom = model(custom_load(0.6,1,1, 61, 1, 1), False, None)
+def custom_load(volfrac, r1, c1, r2, c2, l):
+    new_input = np.zeros((1,) + input_shape + (num_channels,))
+    bc = np.ones((60+1, 60+1)) * volfrac
+    bc[:, 0] = 1
+    load = np.zeros((60+1, 60+1), dtype=int)
+    load[-r1, -c1] = l
+    load[-r2, -c2] = -l
+    print(load)
+
+    new_input[0, :, :, 0] = bc
+    new_input[0, :, :, 1] = load
+
+    return new_input 
+
+y_custom = model(custom_load(0.6, 1, 60, 61, 60, 1))
 
 index = 300
 plt.ion() 
 fig,ax = plt.subplots(1,3)
-ax[0].imshow(np.flipud(np.array(-y[index]).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
-#ax[0].imshow(np.flipud(np.array(y_custom).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
+#ax[0].imshow(np.flipud(np.array(-y[index]).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
+ax[0].imshow(np.flipud(np.array(y_custom).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
 ax[0].set_title('Predicted')
 ax[0].set_xticks([])
 ax[0].set_yticks([])
-ax[1].matshow(-np.flipud(output_test[index].reshape(60, 60)), cmap='gray')
-#ax[1].imshow(-optimization(60, 61, 1, 0.6).reshape(60, 60), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
+#ax[1].matshow(-np.flipud(output_test[index].reshape(60, 60)), cmap='gray')
+ax[1].imshow(-optimization(60, 61, 1, 0.6).reshape(60, 60), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
 ax[1].set_title('Expected')
 ax[1].set_xticks([])
 ax[1].set_yticks([])
