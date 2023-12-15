@@ -1,7 +1,7 @@
 import numpy as np
 import solidspy.preprocesor as pre
 
-def beam(L=10, H=10, F=-1000000, E=206.8e9, v=0.28, nx=20, ny=20, n1=0, n2=0):
+def beam(L=10, H=10, F=-1000000, E=206.8e9, v=0.28, nx=20, ny=20, n1=0, n2=0, n3=0):
     """
     Make the mesh for a cuadrilateral model.
 
@@ -46,9 +46,10 @@ def beam(L=10, H=10, F=-1000000, E=206.8e9, v=0.28, nx=20, ny=20, n1=0, n2=0):
     mask = (x==-L/2)
     nodes[mask, 3:] = -1
 
-    loads = np.zeros((2, 3), dtype=int)
+    loads = np.zeros((3, 3), dtype=int)
     loads[0, 0] = n1
     loads[1, 0] = n2
+    loads[2, 0] = n3
     loads[:, 2] = F
     
     return nodes, mats, els, loads

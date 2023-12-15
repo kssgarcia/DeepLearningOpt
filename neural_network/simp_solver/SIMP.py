@@ -15,8 +15,8 @@ start_time = time.time()
 
 np.seterr(divide='ignore', invalid='ignore')
 
-
-def optimization(n_elem, r1, r2, volfrac):
+61
+def optimization(n_elem, r1, c1, r2, c2, volfrac):
     # Initialize variables
     length = 60
     height = 60
@@ -28,9 +28,10 @@ def optimization(n_elem, r1, r2, volfrac):
     Emax=1.0 # Maximum young modulus of the material
 
     c = 1
-    node_index1 = nx*r1+(r1-c) # Change the linear 
-    node_index2 = nx*r2+(r2-c) # Change the linear 
-    nodes, mats, els, loads = beam(L=length, H=height, nx=nx, ny=ny, n1=node_index1, n2=node_index2)
+    node_index1 = nx*r1+(r1-c1) # Change the linear 
+    node_index2 = nx*r2+(r2-c2) # Change the linear 
+    node_index3 = nx*30+(30-1) # Change the linear 
+    nodes, mats, els, loads = beam(L=length, H=height, nx=nx, ny=ny, n1=node_index1, n2=node_index2, n3=node_index3)
     print(loads)
 
     # Initialize the design variables
