@@ -1,56 +1,76 @@
 # %%
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, UpSampling2D, Dense, Flatten
 import numpy as np
+import matplotlib.pyplot as plt 
+from matplotlib import colors
+import tensorflow as tf
+from simp_solver.SIMP import optimization
+
+# Create dummy input data
+bc = np.loadtxt('../simp/results_merge_2/bc.txt')
+load = np.loadtxt('../simp/results_merge_2/load.txt')
+#vol = np.loadtxt('../simp/results_merge_2/vol.txt')
+output = np.loadtxt('../simp/results_merge_2/output.txt')
 
 # Generate random input data
 input_shape = (61, 61)  # Input size of 61x61
 num_channels = 2  # Number of channels in each input array
-batch_size = 17690  # Number of samples in each batch
-
-# Create dummy input data
-bc = np.loadtxt('results/bc.txt')
-load = np.loadtxt('results/load.txt')
-output = np.loadtxt('results/output.txt')
+batch_size = bc.shape[0]  # Number of samples in each batch
 
 input_data = np.zeros((batch_size,) + input_shape + (num_channels,))
 for i in range(batch_size):
     input_data[i, :, :, 0] = bc[i].reshape((61,61))
     input_data[i, :, :, 1] = load[i].reshape((61,61))
+    #input_data[i, :, :, 2] = load[i].reshape((61,61))
 
-output_train = np.zeros((batch_size,3600))
-output_train[:] = output
+output_train = output.reshape(output.shape[0], 60, 60)
 
-model = Sequential()
-# Layers down-sampling
-model.add(Conv2D(32, (3, 3), activation='relu', padding='same', input_shape=(61, 61, num_channels)))
-model.add(MaxPooling2D((2, 2)))
-model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
-model.add(MaxPooling2D((2, 2)))
-model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
-model.add(MaxPooling2D((2, 2)))
+input_test = input_data[-1000:]
+output_test = output_train[-1000:]
 
-# Upsampling layers
-model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
-model.add(UpSampling2D((2, 2)))
-model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
-model.add(UpSampling2D((2, 2)))
-model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
-model.add(UpSampling2D((2, 2)))
+# %%
+from U_NN import UNN_model
 
-# Flatten layer
-model.add(Flatten())
-
-# Output layer
-model.add(Dense(3600, activation='sigmoid'))
-model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+model = UNN_model()
 
 # Load the saved weights
-model.load_weights('./weights/weights_epoch_07.h5')
+model.load_weights('../models/best_unn/cp.ckpt')
 
-# Continue training with the new data
-model.fit(input_data, output, epochs=3, batch_size=1)
+# %%
+def custom_load(volfrac, r1, c1, r2, c2, l):
+    new_input = np.zeros((1,) + input_shape + (num_channels,))
+    bc = np.ones((60+1, 60+1)) * volfrac
+    bc[:, 0] = 1
+    load = np.zeros((60+1, 60+1), dtype=int)
+    load[-r1, -c1] = l
+    load[-r2, -c2] = l
+    load[-30, -1] = l
 
-# Save the model
-model.save('models/first')
+    new_input[0, :, :, 0] = bc
+    new_input[0, :, :, 1] = load
+    
+
+    return new_input 
+input_mod = np.concatenate((input_test, custom_load(0.6, 20, 1, 61, 1, 1)), axis=0)
+
+#y_custom = model.predict(custom_load(0.6,1,1, 61, 1, 1))
+
+y = model.predict(input_mod)
+
+index = -1
+plt.ion() 
+fig,ax = plt.subplots(1,3)
+ax[0].imshow(np.flipud(np.array(-y[index]).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
+#ax[0].imshow(np.array(y_custom).reshape(60, 60), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
+ax[0].set_title('Predicted')
+ax[0].set_xticks([])
+ax[0].set_yticks([])
+#ax[1].matshow(-np.flipud(output_test[index].reshape(60, 60)), cmap='gray')
+ax[1].imshow(-np.flipud(optimization(60, 20, 1, 61, 1, 0.6).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
+ax[1].set_title('Expected')
+ax[1].set_xticks([])
+ax[1].set_yticks([])
+ax[2].matshow(load[index].reshape(61, 61), cmap='gray')
+ax[2].set_title('Load point')
+ax[2].set_xticks([])
+ax[2].set_yticks([])
+fig.show()

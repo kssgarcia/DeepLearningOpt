@@ -15,6 +15,7 @@
 - `results_2f_2` Folder with the data with just 2 force second part
 - `results_2f_3` Folder with the data with just 2 force third part
 - `results_merge_#` Folder with the data mix of all folders
+- `results_merge_3` Folder with the data mix of all 2f results 2f_1 and 2f_3
 - `results_dist` Folder with the data of distribution loads
 
 
