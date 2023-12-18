@@ -77,7 +77,7 @@ def optimization(n_elem, r1, r2, volfrac):
         # System solution
         disp = spsolve(stiff_mat, rhs_vec)
         UC = pos.complete_disp(bc_array, nodes, disp)
-        #strain_nodes, stress_nodes = pos.strain_nodes(nodes, els, mats[:,:2], UC)
+        strain_nodes, stress_nodes = pos.strain_nodes(nodes, els, mats[:,:2], UC)
 
         # Sensitivity analysis
         sensi_rho[:] = (np.dot(UC[els[:,-4:]].reshape(nx*ny,8),kloc) * UC[els[:,-4:]].reshape(nx*ny,8) ).sum(1)

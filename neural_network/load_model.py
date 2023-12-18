@@ -28,8 +28,8 @@ input_test = input_data[-1000:]
 output_test = output_train[-1000:]
 
 # %%
-#model = tf.keras.models.load_model('../models/unn_last_100')
-model = tf.keras.models.load_model('../models/vit_last_100')
+model = tf.keras.models.load_model('../models/unn_last_100')
+#model = tf.keras.models.load_model('../models/model_unet')
 model.summary()
 
 # %%

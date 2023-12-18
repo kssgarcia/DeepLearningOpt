@@ -4,16 +4,16 @@ from tensorflow import keras
 from models import UNN_model
 
 # Create dummy input data
-bc = np.loadtxt('../simp/results_FEM/bc.txt')
-load = np.loadtxt('../simp/results_FEM/load.txt')
+bc = np.loadtxt('../simp/results_merge_2/bc.txt')
+load = np.loadtxt('../simp/results_merge_2/load.txt')
 #stress = np.loadtxt('../simp/results_FEM/stress.txt')
 #uc = np.loadtxt('../simp/results_FEM/uc.txt')
-vol = np.loadtxt('../simp/results_FEM/vol.txt')
-output = np.loadtxt('../simp/results_FEM/output.txt')
+#vol = np.loadtxt('../simp/results_FEM/vol.txt')
+output = np.loadtxt('../simp/results_merge_2/output.txt')
 
 # Generate random input data
 input_shape = (61, 61)  # Input size of 61x61
-num_channels = 3  # Number of channels in each input array
+num_channels = 2  # Number of channels in each input array
 batch_size = bc.shape[0]  # Number of samples in each batch
 
 input_data = np.zeros((batch_size,) + input_shape + (num_channels,))

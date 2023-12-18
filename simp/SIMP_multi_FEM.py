@@ -21,7 +21,7 @@ Emin=1e-9
 Emax=1.0
 
 # Optimise function
-def optimise(r1, c1, r2, c2, volfrac):
+def optimise(r1, c1, r2, c2, volfrac, bc, load):
     node_index1 = nx*r1+(r1-c1) # Change the linear 
     node_index2 = nx*r2+(r2-c2) # Change the linear 
     nodes, mats, els, loads = beam(L=length, H=height, nx=nx, ny=ny, n1=node_index1, n2=node_index2)
@@ -50,6 +50,21 @@ def optimise(r1, c1, r2, c2, volfrac):
     assem_op, bc_array, neq = ass.DME(nodes[:, -2:], els, ndof_el_max=8) 
 
     iter = 0
+    # System assembly
+    stiff_mat = sparse_assem(els, mats, nodes[:, :3], neq, assem_op, kloc)
+    rhs_vec = ass.loadasem(loads, bc_array, neq)
+
+    # System solution
+    disp = spsolve(stiff_mat, rhs_vec)
+    UC = pos.complete_disp(bc_array, nodes, disp)
+    _, stress_nodes = pos.strain_nodes(nodes, els, mats[:,:2], UC)
+
+    UC_x = UC[:,0]
+    UC_y = UC[:,1]
+    stress_x = stress_nodes[:,0]
+    stress_y = stress_nodes[:,1]
+    stress_xy = stress_nodes[:,2]
+
     for _ in range(niter):
         iter += 1
 
@@ -83,7 +98,7 @@ def optimise(r1, c1, r2, c2, volfrac):
         change = np.linalg.norm(rho.reshape(nx*ny,1)-rho_old.reshape(nx*ny,1),np.inf)
 
     vol = np.ones((nx + 1, ny + 1)) * volfrac
-    return UC, vol.flatten(), stress_nodes, rho
+    return bc.flatten(), load.flatten(), UC_x, UC_y, stress_x, stress_y, stress_xy, vol.flatten(), rho
 
 if __name__ == "__main__":
     start_time = time.perf_counter()
@@ -99,13 +114,19 @@ if __name__ == "__main__":
     a = True
     iter = 0
     for l in [1,-1]:
-        for c1 in range(1, 2):
-            for r1 in range(1, 2):
-                for c2 in range(1, 2):
-                    for r2 in range(1, 2):
+        for c1 in [1,5,10]:
+            for r1 in range(1, ny+2):
+                for c2 in [1,5,10]:
+                    for r2 in range(1, ny+2):
+                        load = np.zeros((nx+1, ny+1), dtype=int)
+                        load[-r1, -c1] = l
+                        load[-r2, -c2] = l
                         for volfrac in [0.5,0.6,0.7,0.8,0.9]:
+                            # Create and initialize channels
+                            bc = np.ones((nx + 1, ny + 1)) * volfrac
+                            bc[:, 0] = 1
                             iter += 1
-                            task = (r1, c1, r2, c2, volfrac)
+                            task = (r1, c1, r2, c2, volfrac, bc, load)
                             tasks.append(task)
 
     # Create pool
@@ -117,24 +138,39 @@ if __name__ == "__main__":
     pool.close()
     pool.join()
 
-    final_input_uc = []
+    final_input_bc = []
+    final_input_load = []
+    final_input_uc_x = []
+    final_input_uc_y = []
+    final_input_stress_x = []
+    final_input_stress_y = []
+    final_input_stress_xy = []
     final_input_vol = []
-    final_input_stress = []
     final_output_rho = []
 
     # Unpack results
     for result in results:
-        final_input_uc.append(result[0])
-        final_input_vol.append(result[1])
-        final_input_stress.append(result[2])
-        final_output_rho.append(result[3])
+        final_input_bc.append(result[0])
+        final_input_load.append(result[1])
+        final_input_uc_x.append(result[2])
+        final_input_uc_y.append(result[3])
+        final_input_stress_x.append(result[4])
+        final_input_stress_y.append(result[5])
+        final_input_stress_xy.append(result[6])
+        final_input_vol.append(result[7])
+        final_output_rho.append(result[8])
 
     # Save data
     dir = './results'
     if not path.exists(dir): makedirs(dir)
-    np.savetxt(dir + '/uc.txt', np.array(final_input_uc), fmt='%.3f')
-    np.savetxt(dir + '/vol.txt', final_input_vol, fmt="%.1f")
-    np.savetxt(dir + '/stress.txt', final_input_vol, fmt="%.3f")
+    np.savetxt(dir + '/bc.txt', np.array(final_input_bc), fmt="%.3f")
+    np.savetxt(dir + '/load.txt', np.array(final_input_load), fmt="%.3f")
+    np.savetxt(dir + '/uc_x.txt', np.array(final_input_uc_x), fmt="%.3f")
+    np.savetxt(dir + '/uc_y.txt', np.array(final_input_uc_y), fmt="%.3f")
+    np.savetxt(dir + '/stress_x.txt', np.array(final_input_stress_x), fmt="%.3f")
+    np.savetxt(dir + '/stress_y.txt', np.array(final_input_stress_y), fmt="%.3f")
+    np.savetxt(dir + '/stress_xy.txt', np.array(final_input_stress_xy), fmt="%.3f")
+    np.savetxt(dir + '/vol.txt', np.array(final_input_vol), fmt="%.1f")
     np.savetxt(dir + '/output.txt', np.array(final_output_rho), fmt="%.3f")
 
     # Log time
