@@ -50,6 +50,8 @@ def UNN_model(num_channels):
             encoded = MaxPooling2D((3, 3))(x)
         else:
             encoded = MaxPooling2D((2, 2))(x)
+
+        encoded = layers.Dropout(rate=0.2)(encoded) # New line
         return encoded
 
     encoded1 = encoding_block(initial, filters=64)
@@ -72,6 +74,8 @@ def UNN_model(num_channels):
         x = BatchNormalization()(x)
         x = Conv2D(filters, (3, 3), activation='relu', padding='same')(x)
         x = BatchNormalization()(x)
+
+        x = layers.Dropout(rate=0.2)(x) # New line
         return x
 
     decoded1 = decoding_block(x, encoded3, filters=128)

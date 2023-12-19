@@ -32,7 +32,6 @@ output_train = output_data[:-1000]
 input_test = input_data[-1000:]
 output_test = output_data[-1000:]
 
-
 model = UNN_model(num_channels)
 
 # %%

@@ -6,10 +6,10 @@ import tensorflow as tf
 from simp_solver.SIMP import optimization
 
 # Create dummy input data
-bc = np.loadtxt('../simp/results_merge_3/bc.txt')
-load = np.loadtxt('../simp/results_merge_3/load.txt')
+bc = np.loadtxt('../simp/results_merge_2/bc.txt')
+load = np.loadtxt('../simp/results_merge_2/load.txt')
 #vol = np.loadtxt('../simp/results_merge_2/vol.txt')
-output = np.loadtxt('../simp/results_merge_3/output.txt')
+output = np.loadtxt('../simp/results_merge_2/output.txt')
 
 # Generate random input data
 input_shape = (61, 61)  # Input size of 61x61

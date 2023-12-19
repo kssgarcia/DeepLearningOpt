@@ -29,6 +29,26 @@ input_test = input_data[-1000:]
 output_test = output_train[-1000:]
 
 # %%
+'''
+num_classes = 100
+input_shape = (61, 61, 2)
+
+learning_rate = 0.001
+weight_decay = 0.0001
+num_epochs = 100
+image_size = 60  # We'll resize input images to this size
+patch_size = 10  # Size of the patches to be extract from the input images
+num_patches = (image_size // patch_size) ** 2
+projection_dim = 64
+num_heads = 12
+transformer_units = [
+    projection_dim * 2,
+    projection_dim,
+]  # Size of the transformer layers
+transformer_layers = 15
+
+model = ViT_model(input_shape, patch_size, num_patches, projection_dim, num_heads, transformer_units, transformer_layers)
+'''
 
 model = UNN_model(num_channels)
 
@@ -41,7 +61,7 @@ test_loss, test_accuracy = model.evaluate(input_test, output_test)
 
 # %%
 def custom_load(volfrac, r1, c1, r2, c2, l):
-    new_input = np.zeros((1,) + input_shape + (num_channels,))
+    new_input = np.zeros((1,) + (61,61) + (num_channels,))
     bc = np.ones((60+1, 60+1)) * volfrac
     bc[:, 0] = 1
     load = np.zeros((60+1, 60+1), dtype=int)
@@ -54,7 +74,7 @@ def custom_load(volfrac, r1, c1, r2, c2, l):
     
     return new_input 
 
-input_mod = np.concatenate((input_test, custom_load(0.6, 20, 1, 61, 1, 1)), axis=0)
+input_mod = np.concatenate((input_test, custom_load(0.6, 1, 1, 61, 1, 1)), axis=0)
 
 #y_custom = model.predict(custom_load(0.6,1,1, 61, 1, 1))
 
@@ -69,7 +89,7 @@ ax[0].set_title('Predicted')
 ax[0].set_xticks([])
 ax[0].set_yticks([])
 #ax[1].matshow(-np.flipud(output_test[index].reshape(60, 60)), cmap='gray')
-ax[1].imshow(-np.flipud(optimization(60, 20, 1, 61, 1, 0.6).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
+ax[1].imshow(-np.flipud(optimization(60, 1, 1, 61, 1, 0.6).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
 ax[1].set_title('Expected')
 ax[1].set_xticks([])
 ax[1].set_yticks([])

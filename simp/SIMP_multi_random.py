@@ -1,41 +1,28 @@
-# %%
-import time
-import random
+from os import path, makedirs
+import multiprocessing
+import logging
 import numpy as np
 from scipy.sparse.linalg import spsolve
 import solidspy.assemutil as ass # Solidspy 1.1.0
-
-import matplotlib.pyplot as plt 
-from matplotlib import colors
-
 from Utils.beams import *
 from Utils.SIMP_utils import *
-
-# Start the timer
-start_time = time.time()
+import random 
 
 np.seterr(divide='ignore', invalid='ignore')
 
+# Initialize variables
+length = 10
+height = 10
+nx = 60
+ny= 60
+niter = 100
+penal = 3
+Emin=1e-9
+Emax=1.0
 
-def optimization(n_elem, volfrac):
-    # Initialize variables
-    length = 60
-    height = 60
-    nx = n_elem
-    ny= n_elem
-    niter = 60
-    penal = 3 # Penalization factor
-    Emin=1e-9 # Minimum young modulus of the material
-    Emax=1.0 # Maximum young modulus of the material
-
-    #directions = [[0,1], [1,0], [0,-1], [-1,0]]
-    #num_forces = random.randint(1,5)
-    #dirs = np.array([random.choice(directions) for _ in range(num_forces)])
-    #positions = np.array([[random.randint(1, 61), random.randint(1, 30)] for _ in range(num_forces)])
-    dirs = np.array([[0,-1], [0,1], [1,0]])
-    positions = np.array([[61,30], [1,30], [30, 1]])
+# Optimise function
+def optimise(dirs, positions, volfrac, load_x, load_y, bc):
     nodes, mats, els, loads = beam_rand(L=length, H=height, nx=nx, ny=ny, dirs=dirs, positions=positions)
-    print(loads)
 
     # Initialize the design variables
     change = 10 # Change in the design variable
@@ -80,8 +67,6 @@ def optimization(n_elem, volfrac):
         disp = spsolve(stiff_mat, rhs_vec)
         UC = pos.complete_disp(bc_array, nodes, disp)
 
-        compliance = rhs_vec.T.dot(disp)
-
         # Sensitivity analysis
         sensi_rho[:] = (np.dot(UC[els[:,-4:]].reshape(nx*ny,8),kloc) * UC[els[:,-4:]].reshape(nx*ny,8) ).sum(1)
         d_c[:] = (-penal*rho**(penal-1)*(Emax-Emin))*sensi_rho
@@ -94,11 +79,64 @@ def optimization(n_elem, volfrac):
         # Compute the change
         change = np.linalg.norm(rho.reshape(nx*ny,1)-rho_old.reshape(nx*ny,1),np.inf)
 
-    plt.ion() 
-    fig,ax = plt.subplots()
-    ax.imshow(-rho.reshape(n_elem,n_elem), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
-    ax.set_title('Predicted')
-    fig.show()
+    print(rho.shape)
+
+    return bc.flatten(), load_x.flatten(), load_y.flatten(), rho
 
 if __name__ == "__main__":
-    optimization(60, 0.6)
+    # Initialize storage variables
+    tasks = []
+    results = []
+
+    # Create tasks
+    a = True
+    iter = 0
+
+    directions = [[0,1], [1,0], [0,-1], [-1,0]]
+    vols = [0.5,0.6,0.7,0.8,0.9]
+    for _ in range(10000):
+        volfrac = random.choice(vols)
+        num_forces = random.randint(1,5)
+        dirs = np.array([random.choice(directions) for _ in range(num_forces)])
+        positions = np.array([[random.randint(1, 61), random.randint(1, 30)] for _ in range(num_forces)])
+
+        load_x = np.zeros((nx+1, ny+1), dtype=int)
+        load_y = np.zeros((nx+1, ny+1), dtype=int)
+        load_x[-positions[:,0], -positions[:,1]] = dirs[:,0]
+        load_y[-positions[:,0], -positions[:,1]] = dirs[:,1]
+
+        bc = np.ones((nx + 1, ny + 1)) * volfrac
+        bc[:, 0] = 1
+
+        iter += 1
+        task = (dirs, positions, volfrac, load_x, load_y, bc)
+        tasks.append(task)
+
+    # Create pool
+    num_processor = multiprocessing.cpu_count()
+    pool = multiprocessing.Pool(processes=num_processor)
+    print(num_processor)
+
+    results = pool.starmap(optimise, tasks)
+    pool.close()
+    pool.join()
+
+    final_input_bc = []
+    final_input_load_x = []
+    final_input_load_y = []
+    final_output_rho = []
+
+    # Unpack results
+    for result in results:
+        final_input_bc.append(result[0])
+        final_input_load_x.append(result[1])
+        final_input_load_y.append(result[2])
+        final_output_rho.append(result[3])
+
+    # Save data
+    dir = './results_rand'
+    if not path.exists(dir): makedirs(dir)
+    np.savetxt(dir + '/bc.txt', final_input_bc, fmt="%.1f")
+    np.savetxt(dir + '/load_x.txt', np.array(final_input_load_x), fmt='%.f')
+    np.savetxt(dir + '/load_y.txt', np.array(final_input_load_y), fmt='%.f')
+    np.savetxt(dir + '/output.txt', np.array(final_output_rho), fmt="%.3f")

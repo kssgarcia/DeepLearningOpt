@@ -1,6 +1,7 @@
 # %%
 import time
 import numpy as np
+import random
 from scipy.sparse.linalg import spsolve
 import solidspy.assemutil as ass # Solidspy 1.1.0
 
@@ -15,7 +16,6 @@ start_time = time.time()
 
 np.seterr(divide='ignore', invalid='ignore')
 
-61
 def optimization(n_elem, r1, c1, r2, c2, volfrac):
     # Initialize variables
     length = 60
@@ -27,12 +27,22 @@ def optimization(n_elem, r1, c1, r2, c2, volfrac):
     Emin=1e-9 # Minimum young modulus of the material
     Emax=1.0 # Maximum young modulus of the material
 
-    c = 1
     node_index1 = nx*r1+(r1-c1) # Change the linear 
     node_index2 = nx*r2+(r2-c2) # Change the linear 
     node_index3 = nx*30+(30-1) # Change the linear 
     nodes, mats, els, loads = beam(L=length, H=height, nx=nx, ny=ny, n1=node_index1, n2=node_index2, n3=node_index3)
     print(loads)
+
+    '''
+    directions = [[0,1], [1,0], [0,-1], [-1,0]]
+    num_forces = random.randint(1,5)
+    dirs = np.array([random.choice(directions) for _ in range(num_forces)])
+    positions = np.array([[random.randint(1, 61), random.randint(1, 30)] for _ in range(num_forces)])
+    #dirs = np.array([[0,1], [0,1], [0,1]])
+    #positions = np.array([[61,1], [1,1], [30, 1]])
+    nodes, mats, els, loads = beam_rand(L=length, H=height, nx=nx, ny=ny, dirs=dirs, positions=positions)
+    print(loads)
+    '''
 
     # Initialize the design variables
     change = 10 # Change in the design variable
