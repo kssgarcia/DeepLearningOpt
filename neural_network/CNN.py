@@ -1,6 +1,4 @@
 # %%
-import os
-import time
 import numpy as np
 from tensorflow import keras
 from models import CNN_model
@@ -21,7 +19,7 @@ for i in range(batch_size):
     input_data[i, :, :, 1] = load[i].reshape((61,61))
     #input_data[i, :, :, 2] = vol[i].reshape((61,61))
 
-output_data = output.reshape((output.shape[0],60,60))
+output_data = output.reshape((output.shape[0],60,60,1))
 
 input_train = input_data[:-1000]
 output_train = output_data[:-1000]
@@ -29,14 +27,9 @@ output_train = output_data[:-1000]
 input_test = input_data[-1000:]
 output_test = output_data[-1000:]
 
-# %%
-# Start the timer
-start_time = time.perf_counter()
-
-
 model = CNN_model(num_channels)
-model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-model.summary()
+
+# %%
 
 checkpoint_callback = keras.callbacks.ModelCheckpoint(
     './best/cp.ckpt',
@@ -55,7 +48,7 @@ earlyStopping_callback = keras.callbacks.EarlyStopping(
 )
 
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-model.fit(input_train, input_train, epochs=5, batch_size=10,validation_split=0.1, callbacks=[checkpoint_callback, earlyStopping_callback, checkpoint])
+model.fit(input_train, output_train, epochs=5, batch_size=10,validation_split=0.1, callbacks=[checkpoint_callback, earlyStopping_callback])
 
 # Save the model
 model.save('../models/model_unet')

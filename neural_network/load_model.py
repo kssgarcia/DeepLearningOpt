@@ -6,10 +6,10 @@ import tensorflow as tf
 from simp_solver.SIMP import optimization
 
 # Create dummy input data
-bc = np.loadtxt('../simp/results_merge_2/bc.txt')
-load = np.loadtxt('../simp/results_merge_2/load.txt')
+bc = np.loadtxt('../simp/results_merge_3/bc.txt')
+load = np.loadtxt('../simp/results_merge_3/load.txt')
 #vol = np.loadtxt('../simp/results_merge_2/vol.txt')
-output = np.loadtxt('../simp/results_merge_2/output.txt')
+output = np.loadtxt('../simp/results_merge_3/output.txt')
 
 # Generate random input data
 input_shape = (61, 61)  # Input size of 61x61
@@ -29,12 +29,10 @@ output_test = output_train[-1000:]
 
 # %%
 model = tf.keras.models.load_model('../models/unn_last_100')
-#model = tf.keras.models.load_model('../models/model_unet')
 model.summary()
 
 # %%
 test_loss, test_accuracy = model.evaluate(input_test, output_test)
-print(test_loss)
 
 # %%
 def custom_load(volfrac, r1, c1, r2, c2, l):
@@ -51,7 +49,7 @@ def custom_load(volfrac, r1, c1, r2, c2, l):
     
 
     return new_input 
-input_mod = np.concatenate((input_test, custom_load(0.6, 20, 1, 61, 1, 1)), axis=0)
+input_mod = np.concatenate((input_test, custom_load(0.6, 1, 1, 61, 1, 1)), axis=0)
 
 #y_custom = model.predict(custom_load(0.6,1,1, 61, 1, 1))
 
@@ -66,7 +64,7 @@ ax[0].set_title('Predicted')
 ax[0].set_xticks([])
 ax[0].set_yticks([])
 #ax[1].matshow(-np.flipud(output_test[index].reshape(60, 60)), cmap='gray')
-ax[1].imshow(-np.flipud(optimization(60, 20, 1, 61, 1, 0.6).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
+ax[1].imshow(-np.flipud(optimization(60, 1, 1, 61, 1, 0.6).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
 ax[1].set_title('Expected')
 ax[1].set_xticks([])
 ax[1].set_yticks([])

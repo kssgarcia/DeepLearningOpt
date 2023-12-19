@@ -16,21 +16,18 @@ def CNN_model(num_channels):
     model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
     model.add(MaxPooling2D((2, 2)))
     model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
-    model.add(MaxPooling2D((2, 2)))
+    model.add(MaxPooling2D((3, 3)))
 
     # Upsampling layers
     model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
-    model.add(UpSampling2D((2, 2)))
+    model.add(UpSampling2D((3, 3)))
     model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
     model.add(UpSampling2D((2, 2)))
     model.add(Conv2D(32, (3, 3), activation='relu', padding='same'))
     model.add(UpSampling2D((2, 2)))
-
-    # Flatten layer
-    model.add(Flatten())
+    model.add(Conv2D(1, (1, 1), activation='sigmoid'))
 
     # Output layer
-    model.add(Dense(3600, activation='sigmoid'))
     return model
 
 # %% CNN with U-NET architecture

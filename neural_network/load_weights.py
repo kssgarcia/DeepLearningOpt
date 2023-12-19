@@ -4,12 +4,13 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 import tensorflow as tf
 from simp_solver.SIMP import optimization
+from models import CNN_model, UNN_model, ViT_model
 
 # Create dummy input data
-bc = np.loadtxt('../simp/results_merge_2/bc.txt')
-load = np.loadtxt('../simp/results_merge_2/load.txt')
+bc = np.loadtxt('../simp/results_merge_3/bc.txt')
+load = np.loadtxt('../simp/results_merge_3/load.txt')
 #vol = np.loadtxt('../simp/results_merge_2/vol.txt')
-output = np.loadtxt('../simp/results_merge_2/output.txt')
+output = np.loadtxt('../simp/results_merge_3/output.txt')
 
 # Generate random input data
 input_shape = (61, 61)  # Input size of 61x61
@@ -28,12 +29,15 @@ input_test = input_data[-1000:]
 output_test = output_train[-1000:]
 
 # %%
-from U_NN import UNN_model
 
-model = UNN_model()
+model = UNN_model(num_channels)
 
 # Load the saved weights
-model.load_weights('../models/best_unn/cp.ckpt')
+model.load_weights('../models/best_models/best_unn/cp.ckpt')
+model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+
+# %%
+test_loss, test_accuracy = model.evaluate(input_test, output_test)
 
 # %%
 def custom_load(volfrac, r1, c1, r2, c2, l):
@@ -48,8 +52,8 @@ def custom_load(volfrac, r1, c1, r2, c2, l):
     new_input[0, :, :, 0] = bc
     new_input[0, :, :, 1] = load
     
-
     return new_input 
+
 input_mod = np.concatenate((input_test, custom_load(0.6, 20, 1, 61, 1, 1)), axis=0)
 
 #y_custom = model.predict(custom_load(0.6,1,1, 61, 1, 1))
