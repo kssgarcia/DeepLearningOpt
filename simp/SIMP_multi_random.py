@@ -94,11 +94,15 @@ if __name__ == "__main__":
 
     directions = [[0,1], [1,0], [0,-1], [-1,0]]
     vols = [0.5,0.6,0.7,0.8,0.9]
-    for _ in range(10000):
-        volfrac = random.choice(vols)
+    for _ in range(5):
+        #volfrac = random.choice(vols)
+        volfrac = 0.6
         num_forces = random.randint(1,5)
-        dirs = np.array([random.choice(directions) for _ in range(num_forces)])
-        positions = np.array([[random.randint(1, 61), random.randint(1, 30)] for _ in range(num_forces)])
+        #dirs = np.array([random.choice(directions) for _ in range(num_forces)])
+        #positions = np.array([[random.randint(1, 61), random.randint(1, 30)] for _ in range(num_forces)])
+
+        dirs = np.array([[0,-1], [0,1], [1,0]])
+        positions = np.array([[61,30], [1,30], [30, 1]])
 
         load_x = np.zeros((nx+1, ny+1), dtype=int)
         load_y = np.zeros((nx+1, ny+1), dtype=int)

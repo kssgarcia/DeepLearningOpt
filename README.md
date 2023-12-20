@@ -17,6 +17,7 @@
 - `results_merge_#` Folder with the data mix of all folders
 - `results_merge_3` Folder with the data mix of all 2f results 2f_1 and 2f_3
 - `results_dist` Folder with the data of distribution loads
+- `results_rand` Folder with the data random 10000
 
 
 ### Model folder

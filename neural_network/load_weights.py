@@ -7,20 +7,22 @@ from simp_solver.SIMP import optimization
 from models import CNN_model, UNN_model, ViT_model
 
 # Create dummy input data
-bc = np.loadtxt('../simp/results_merge_3/bc.txt')
-load = np.loadtxt('../simp/results_merge_3/load.txt')
+bc = np.loadtxt('../simp/results_rand/bc.txt')
+load_x = np.loadtxt('../simp/results_rand/load_x.txt')
+load_y = np.loadtxt('../simp/results_rand/load_x.txt')
 #vol = np.loadtxt('../simp/results_merge_2/vol.txt')
-output = np.loadtxt('../simp/results_merge_3/output.txt')
+output = np.loadtxt('../simp/results_rand/output.txt')
 
 # Generate random input data
 input_shape = (61, 61)  # Input size of 61x61
-num_channels = 2  # Number of channels in each input array
+num_channels = 3  # Number of channels in each input array
 batch_size = bc.shape[0]  # Number of samples in each batch
 
 input_data = np.zeros((batch_size,) + input_shape + (num_channels,))
 for i in range(batch_size):
     input_data[i, :, :, 0] = bc[i].reshape((61,61))
-    input_data[i, :, :, 1] = load[i].reshape((61,61))
+    input_data[i, :, :, 1] = load_x[i].reshape((61,61))
+    input_data[i, :, :, 2] = load_y[i].reshape((61,61))
     #input_data[i, :, :, 2] = load[i].reshape((61,61))
 
 output_train = output.reshape(output.shape[0], 60, 60)
@@ -53,7 +55,7 @@ model = ViT_model(input_shape, patch_size, num_patches, projection_dim, num_head
 model = UNN_model(num_channels)
 
 # Load the saved weights
-model.load_weights('../models/best_models/best_unn/cp.ckpt')
+model.load_weights('../models/best_models/best_unn_rand/cp.ckpt')
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
 # %%
@@ -64,13 +66,15 @@ def custom_load(volfrac, r1, c1, r2, c2, l):
     new_input = np.zeros((1,) + (61,61) + (num_channels,))
     bc = np.ones((60+1, 60+1)) * volfrac
     bc[:, 0] = 1
-    load = np.zeros((60+1, 60+1), dtype=int)
-    load[-r1, -c1] = l
-    load[-r2, -c2] = l
-    load[-30, -1] = l
+    load_y = np.zeros((60+1, 60+1), dtype=int)
+    load_y[-r1, -c1] = l
+    load_y[-r2, -c2] = l
+    load_y[-30, -1] = l
+    load_x = np.zeros((60+1, 60+1), dtype=int)
 
     new_input[0, :, :, 0] = bc
-    new_input[0, :, :, 1] = load
+    new_input[0, :, :, 1] = load_x
+    new_input[0, :, :, 2] = load_y
     
     return new_input 
 
