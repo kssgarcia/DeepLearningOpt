@@ -18,6 +18,8 @@
 - `results_merge_3` Folder with the data mix of all 2f results 2f_1 and 2f_3
 - `results_dist` Folder with the data of distribution loads
 - `results_rand` Folder with the data random 10000
+- `results_rand4` Folder with the data random 20000 with just vertical forces
+- `results_rand5` Folder with the data random 40000 with just vertical forces
 
 
 ### Model folder

@@ -3,6 +3,8 @@ import os
 import numpy as np
 from tensorflow import keras
 from models import ViT_model
+import matplotlib.pyplot as plt
+from os import path, makedirs
 
 # Create dummy input data
 bc = np.loadtxt('../simp/results_merge_2/bc.txt')
@@ -71,6 +73,27 @@ earlyStopping_callback = keras.callbacks.EarlyStopping(
 )
 
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-model.fit(x_test, y_test, epochs=5, batch_size=10,validation_split=0.1, callbacks=[checkpoint_callback, earlyStopping_callback])
+history = model.fit(x_test, y_test, epochs=5, batch_size=10,validation_split=0.1, callbacks=[checkpoint_callback, earlyStopping_callback])
 
-# %%
+dir = './plots'
+if not path.exists(dir): makedirs(dir)
+plt.figure(figsize=(10, 6))
+plt.plot(history.history['loss'], label='Training Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+plt.title('Training and Validation Loss')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.legend()
+plt.savefig('plots/loss_plot.png')  # Save the plot as an image
+plt.show()
+
+# Plotting training and validation accuracy
+plt.figure(figsize=(10, 6))
+plt.plot(history.history['accuracy'], label='Training Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+plt.title('Training and Validation Accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.legend()
+plt.savefig('plots/accuracy_plot.png')  # Save the plot as an image
+plt.show()

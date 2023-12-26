@@ -21,13 +21,13 @@ Emin=1e-9
 Emax=1.0
 
 # Optimise function
-def optimise(dirs, positions, volfrac, load_x, load_y, bc):
+def optimise(dirs, positions, load_x, load_y, bc):
     nodes, mats, els, loads = beam_rand(L=length, H=height, nx=nx, ny=ny, dirs=dirs, positions=positions)
 
     # Initialize the design variables
     change = 10 # Change in the design variable
     g = 0 # Constraint
-    rho = volfrac * np.ones(ny*nx, dtype=float) # Initialize the density
+    rho = 0.5 * np.ones(ny*nx, dtype=float) # Initialize the density
     sensi_rho = np.ones(ny*nx) # Initialize the sensitivity
     rho_old = rho.copy() # Initialize the density history
     d_c = np.ones(ny*nx) # Initialize the design change
@@ -50,6 +50,7 @@ def optimise(dirs, positions, volfrac, load_x, load_y, bc):
     iter = 0
     for _ in range(niter):
         iter += 1
+
 
         # Check convergence
         if change < 0.01:
@@ -92,28 +93,27 @@ if __name__ == "__main__":
     a = True
     iter = 0
 
-    directions = [[0,1], [1,0], [0,-1], [-1,0]]
-    vols = [0.5,0.6,0.7,0.8,0.9]
+    directions = [[0,1], [0,-1]]
+    vols = [0.5,0.6,0.7]
     for _ in range(5):
         #volfrac = random.choice(vols)
-        volfrac = 0.6
-        num_forces = random.randint(1,5)
-        #dirs = np.array([random.choice(directions) for _ in range(num_forces)])
-        #positions = np.array([[random.randint(1, 61), random.randint(1, 30)] for _ in range(num_forces)])
+        num_forces = random.randint(1,2)
+        dirs = np.array([random.choice(directions) for _ in range(num_forces)])
+        positions = np.array([[random.randint(1, 61), random.randint(1, 30)] for _ in range(num_forces)])
 
-        dirs = np.array([[0,-1], [0,1], [1,0]])
-        positions = np.array([[61,30], [1,30], [30, 1]])
+        #dirs = np.array([[0,-1], [0,1], [1,0]])
+        #positions = np.array([[61,30], [1,30], [30, 1]])
 
         load_x = np.zeros((nx+1, ny+1), dtype=int)
         load_y = np.zeros((nx+1, ny+1), dtype=int)
         load_x[-positions[:,0], -positions[:,1]] = dirs[:,0]
         load_y[-positions[:,0], -positions[:,1]] = dirs[:,1]
 
-        bc = np.ones((nx + 1, ny + 1)) * volfrac
+        bc = np.zeros((nx + 1, ny + 1))
         bc[:, 0] = 1
 
         iter += 1
-        task = (dirs, positions, volfrac, load_x, load_y, bc)
+        task = (dirs, positions, load_x, load_y, bc)
         tasks.append(task)
 
     # Create pool
@@ -138,7 +138,7 @@ if __name__ == "__main__":
         final_output_rho.append(result[3])
 
     # Save data
-    dir = './results_rand'
+    dir = './results_rand_test'
     if not path.exists(dir): makedirs(dir)
     np.savetxt(dir + '/bc.txt', final_input_bc, fmt="%.1f")
     np.savetxt(dir + '/load_x.txt', np.array(final_input_load_x), fmt='%.f')
