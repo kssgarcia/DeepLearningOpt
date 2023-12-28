@@ -7,16 +7,15 @@ from simp_solver.SIMP import optimization
 from models import CNN_model, UNN_model, ViT_model
 
 # Create dummy input data
-bc = np.loadtxt('../simp/results_rand5/bc.txt')
-vol = np.loadtxt('../simp/results_rand5/vol.txt')
-load_x = np.loadtxt('../simp/results_rand5/load_x.txt')
-load_y = np.loadtxt('../simp/results_rand5/load_y.txt')
+bc = np.loadtxt('../simp/results_rand_6/bc.txt')
+load_x = np.loadtxt('../simp/results_rand_6/load_x.txt')
+load_y = np.loadtxt('../simp/results_rand_6/load_y.txt')
 #vol = np.loadtxt('../simp/results_merge_2/vol.txt')
-output = np.loadtxt('../simp/results_rand5/output.txt')
+output = np.loadtxt('../simp/results_rand_6/output.txt')
 
 # Generate random input data
 input_shape = (61, 61)  # Input size of 61x61
-num_channels = 4  # Number of channels in each input array
+num_channels = 3  # Number of channels in each input array
 batch_size = bc.shape[0]  # Number of samples in each batch
 
 input_data = np.zeros((batch_size,) + input_shape + (num_channels,))
@@ -24,7 +23,6 @@ for i in range(batch_size):
     input_data[i, :, :, 0] = bc[i].reshape((61,61))
     input_data[i, :, :, 1] = load_x[i].reshape((61,61))
     input_data[i, :, :, 2] = load_y[i].reshape((61,61))
-    #input_data[i, :, :, 2] = load[i].reshape((61,61))
 
 output_train = output.reshape(output.shape[0], 60, 60)
 input_train = input_data[:-1000]
@@ -58,7 +56,7 @@ model = ViT_model(input_shape, patch_size, num_patches, projection_dim, num_head
 model = UNN_model(num_channels)
 
 # Load the saved weights
-model.load_weights('../models/best_models/best_unn_rand_4/cp.ckpt')
+model.load_weights('../models/best_models/best_unn_rand_7/cp.ckpt')
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
 # %%
