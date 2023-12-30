@@ -1,4 +1,5 @@
 from os import path, makedirs
+import random
 import multiprocessing
 import logging
 import time
@@ -21,15 +22,13 @@ Emin=1e-9
 Emax=1.0
 
 # Optimise function
-def optimise(r1, c1, r2, c2, volfrac, bc, load):
-    node_index1 = nx*r1+(r1-c1) # Change the linear 
-    node_index2 = nx*r2+(r2-c2) # Change the linear 
-    nodes, mats, els, loads = beam(L=length, H=height, nx=nx, ny=ny, n1=node_index1, n2=node_index2)
+def optimise(dirs, positions, load_x, load_y, bc):
+    nodes, mats, els, loads = beam(L=length, H=height, nx=nx, ny=ny, dirs=dirs, positions=positions)
 
     # Initialize the design variables
     change = 10 # Change in the design variable
     g = 0 # Constraint
-    rho = volfrac * np.ones(ny*nx, dtype=float) # Initialize the density
+    rho = 0.5 * np.ones(ny*nx, dtype=float) # Initialize the density
     sensi_rho = np.ones(ny*nx) # Initialize the sensitivity
     rho_old = rho.copy() # Initialize the density history
     d_c = np.ones(ny*nx) # Initialize the design change
@@ -77,7 +76,7 @@ def optimise(r1, c1, r2, c2, volfrac, bc, load):
         mats[:,2] = Emin+rho**penal*(Emax-Emin)
 
         # System assembly
-        stiff_mat = sparse_assem(els, mats, nodes[:, :3], neq, assem_op, kloc)
+        stiff_mat = sparse_assem(els, mats, neq, assem_op, kloc)
         rhs_vec = ass.loadasem(loads, bc_array, neq)
 
         # System solution
@@ -97,8 +96,7 @@ def optimise(r1, c1, r2, c2, volfrac, bc, load):
         # Compute the change
         change = np.linalg.norm(rho.reshape(nx*ny,1)-rho_old.reshape(nx*ny,1),np.inf)
 
-    vol = np.ones((nx + 1, ny + 1)) * volfrac
-    return bc.flatten(), load.flatten(), UC_x, UC_y, stress_x, stress_y, stress_xy, vol.flatten(), rho
+    return bc.flatten(), load_x.flatten(), load_y.flatten(), UC_x, UC_y, stress_x, stress_y, stress_xy, rho
 
 if __name__ == "__main__":
     start_time = time.perf_counter()
@@ -113,22 +111,30 @@ if __name__ == "__main__":
     # Create tasks
     a = True
     iter = 0
-    for l in [1,-1]:
-        for c1 in [1,5,10]:
-            for r1 in range(1, ny+2):
-                for c2 in [1,5,10]:
-                    for r2 in range(1, ny+2):
-                        load = np.zeros((nx+1, ny+1), dtype=int)
-                        load[-r1, -c1] = l
-                        load[-r2, -c2] = l
-                        for volfrac in [0.5,0.6,0.7,0.8,0.9]:
-                            # Create and initialize channels
-                            bc = np.ones((nx + 1, ny + 1)) * volfrac
-                            bc[:, 0] = 1
-                            iter += 1
-                            task = (r1, c1, r2, c2, volfrac, bc, load)
-                            tasks.append(task)
 
+    directions = [[0,1], [0,-1]]
+    vols = [0.5,0.6,0.7]
+    for _ in range(5):
+        volfrac = random.choice(vols)
+        num_forces = random.randint(1,2)
+        dirs = np.array([random.choice(directions) for _ in range(num_forces)])
+        positions = np.array([[random.randint(1, 61), random.randint(1, 30)] for _ in range(num_forces)])
+
+        #dirs = np.array([[0,-1], [0,1], [1,0]])
+        #positions = np.array([[61,30], [1,30], [30, 1]])
+
+        load_x = np.zeros((nx+1, ny+1), dtype=int)
+        load_y = np.zeros((nx+1, ny+1), dtype=int)
+        load_x[-positions[:,0], -positions[:,1]] = dirs[:,0]
+        load_y[-positions[:,0], -positions[:,1]] = dirs[:,1]
+
+        bc = np.zeros((nx + 1, ny + 1))
+        bc[:, 0] = 1
+
+        iter += 1
+        task = (dirs, positions, load_x, load_y, bc)
+        tasks.append(task)
+    
     # Create pool
     num_processor = multiprocessing.cpu_count()
     pool = multiprocessing.Pool(processes=num_processor)
@@ -139,38 +145,38 @@ if __name__ == "__main__":
     pool.join()
 
     final_input_bc = []
-    final_input_load = []
+    final_input_load_x = []
+    final_input_load_y = []
     final_input_uc_x = []
     final_input_uc_y = []
     final_input_stress_x = []
     final_input_stress_y = []
     final_input_stress_xy = []
-    final_input_vol = []
     final_output_rho = []
 
     # Unpack results
     for result in results:
         final_input_bc.append(result[0])
-        final_input_load.append(result[1])
-        final_input_uc_x.append(result[2])
-        final_input_uc_y.append(result[3])
-        final_input_stress_x.append(result[4])
-        final_input_stress_y.append(result[5])
-        final_input_stress_xy.append(result[6])
-        final_input_vol.append(result[7])
+        final_input_load_x.append(result[1])
+        final_input_load_y.append(result[2])
+        final_input_uc_x.append(result[3])
+        final_input_uc_y.append(result[4])
+        final_input_stress_x.append(result[5])
+        final_input_stress_y.append(result[6])
+        final_input_stress_xy.append(result[7])
         final_output_rho.append(result[8])
 
     # Save data
     dir = './results'
     if not path.exists(dir): makedirs(dir)
     np.savetxt(dir + '/bc.txt', np.array(final_input_bc), fmt="%.3f")
-    np.savetxt(dir + '/load.txt', np.array(final_input_load), fmt="%.3f")
+    np.savetxt(dir + '/load_x.txt', np.array(final_input_load_x), fmt="%.3f")
+    np.savetxt(dir + '/load_y.txt', np.array(final_input_load_y), fmt="%.3f")
     np.savetxt(dir + '/uc_x.txt', np.array(final_input_uc_x), fmt="%.3f")
     np.savetxt(dir + '/uc_y.txt', np.array(final_input_uc_y), fmt="%.3f")
     np.savetxt(dir + '/stress_x.txt', np.array(final_input_stress_x), fmt="%.3f")
     np.savetxt(dir + '/stress_y.txt', np.array(final_input_stress_y), fmt="%.3f")
     np.savetxt(dir + '/stress_xy.txt', np.array(final_input_stress_xy), fmt="%.3f")
-    np.savetxt(dir + '/vol.txt', np.array(final_input_vol), fmt="%.1f")
     np.savetxt(dir + '/output.txt', np.array(final_output_rho), fmt="%.3f")
 
     # Log time

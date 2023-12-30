@@ -17,7 +17,7 @@ start_time = time.time()
 np.seterr(divide='ignore', invalid='ignore')
 
 
-def optimization(n_elem, volfrac):
+def optimization(n_elem):
     # Initialize variables
     length = 60
     height = 60
@@ -34,12 +34,12 @@ def optimization(n_elem, volfrac):
     #positions = np.array([[random.randint(1, 61), random.randint(1, 30)] for _ in range(num_forces)])
     dirs = np.array([[0,-1], [0,1], [1,0]])
     positions = np.array([[61,30], [1,30], [30, 1]])
-    nodes, mats, els, loads = beam_rand(L=length, H=height, nx=nx, ny=ny, dirs=dirs, positions=positions)
+    nodes, mats, els, loads = beam(L=length, H=height, nx=nx, ny=ny, dirs=dirs, positions=positions)
 
     # Initialize the design variables
     change = 10 # Change in the design variable
     g = 0 # Constraint
-    rho = volfrac * np.ones(ny*nx, dtype=float) # Initialize the density
+    rho = 0.5 * np.ones(ny*nx, dtype=float) # Initialize the density
     sensi_rho = np.ones(ny*nx) # Initialize the sensitivity
     rho_old = rho.copy() # Initialize the density history
     d_c = np.ones(ny*nx) # Initialize the design change
@@ -100,4 +100,4 @@ def optimization(n_elem, volfrac):
     fig.show()
 
 if __name__ == "__main__":
-    optimization(60, 0.6)
+    optimization(60)

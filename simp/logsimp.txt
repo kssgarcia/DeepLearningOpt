@@ -47,3 +47,4 @@
 2023-10-24 20:39:54,665 - INFO - Execution time: 34.2102057000011 seconds in SIMP multiprocessing with 12 processors. [50 samples]
 2023-10-24 21:09:35,008 - INFO - Execution time: 1370.980844400001 seconds in SIMP multiprocessing with 12 processors. [1550 samples]
 2023-11-20 10:31:12,259 - INFO - Execution time: 55.06319339998299 seconds in SIMP multiprocessing with 12 processors. [25 samples]
+2023-12-30 13:20:12,748 - INFO - Execution time: 28.35288290004246 seconds in SIMP multiprocessing with 12 processors. [25 samples]

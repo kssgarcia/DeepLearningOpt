@@ -22,7 +22,7 @@ Emax=1.0
 
 # Optimise function
 def optimise(dirs, positions, load_x, load_y, bc):
-    nodes, mats, els, loads = beam_rand(L=length, H=height, nx=nx, ny=ny, dirs=dirs, positions=positions)
+    nodes, mats, els, loads = beam(L=length, H=height, nx=nx, ny=ny, dirs=dirs, positions=positions)
 
     # Initialize the design variables
     change = 10 # Change in the design variable
@@ -50,7 +50,6 @@ def optimise(dirs, positions, load_x, load_y, bc):
     iter = 0
     for _ in range(niter):
         iter += 1
-
 
         # Check convergence
         if change < 0.01:
