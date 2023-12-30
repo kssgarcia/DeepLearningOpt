@@ -35,7 +35,6 @@ def optimization(n_elem, volfrac):
     dirs = np.array([[0,-1], [0,1], [1,0]])
     positions = np.array([[61,30], [1,30], [30, 1]])
     nodes, mats, els, loads = beam_rand(L=length, H=height, nx=nx, ny=ny, dirs=dirs, positions=positions)
-    print(loads)
 
     # Initialize the design variables
     change = 10 # Change in the design variable

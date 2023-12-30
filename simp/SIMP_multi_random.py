@@ -61,7 +61,7 @@ def optimise(dirs, positions, load_x, load_y, bc):
         mats[:,2] = Emin+rho**penal*(Emax-Emin)
 
         # System assembly
-        stiff_mat = sparse_assem(els, mats, nodes[:, :3], neq, assem_op, kloc)
+        stiff_mat = sparse_assem(els, mats, neq, assem_op, kloc)
         rhs_vec = ass.loadasem(loads, bc_array, neq)
 
         # System solution

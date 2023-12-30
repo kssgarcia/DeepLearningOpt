@@ -5,14 +5,10 @@ from scipy.sparse.linalg import spsolve
 
 from scipy.spatial.distance import cdist
 
-def sparse_assem(elements, mats, nodes, neq, assem_op, kloc):
+def sparse_assem(elements, mats, neq, assem_op, kloc):
     """
     Assembles the global stiffness matrix
     using a sparse storing scheme
-
-    The scheme used to assemble is COOrdinate list (COO), and
-    it converted to Compressed Sparse Row (CSR) afterward
-    for the solution phase [1]_.
 
     Parameters
     ----------
@@ -20,27 +16,20 @@ def sparse_assem(elements, mats, nodes, neq, assem_op, kloc):
       Array with the number for the nodes in each element.
     mats    : ndarray (float)
       Array with the material profiles.
-    nodes    : ndarray (float)
-      Array with the nodal numbers and coordinates.
-    assem_op : ndarray (int)
-      Assembly operator.
     neq : int
       Number of active equations in the system.
+    assem_op : ndarray (int)
+      Assembly operator.
     uel : callable function (optional)
       Python function that returns the local stiffness matrix.
+    kloc : ndarray 
+      Stiffness matrix of a single element
 
     Returns
     -------
-    kglob : sparse matrix (float)
+    stiff : sparse matrix (float)
       Array with the global stiffness matrix in a sparse
       Compressed Sparse Row (CSR) format.
-
-    References
-    ----------
-    .. [1] Sparse matrix. (2017, March 8). In Wikipedia,
-        The Free Encyclopedia.
-        https://en.wikipedia.org/wiki/Sparse_matrix
-
     """
     rows = []
     cols = []
@@ -87,7 +76,6 @@ def optimality_criteria(nelx, nely, rho, d_c, g):
         Array with the new density of each element.
     gt : float
         Volume constraint.
-
     """
     l1=0
     l2=1e9
@@ -101,7 +89,7 @@ def optimality_criteria(nelx, nely, rho, d_c, g):
             l1=lmid
         else:
             l2=lmid
-    return (rho_new,gt)
+    return (rho_new, gt)
 
 
 def volume(els, length, height, nx, ny):
@@ -124,7 +112,7 @@ def volume(els, length, height, nx, ny):
     Return 
     ----------
     V: float
-
+        Volume of a single element.
     """
 
     dy = length / nx
@@ -183,43 +171,3 @@ def center_els(nodes, els):
         centers[int(el[0])] = center
 
     return centers
-
-def plot_mesh(elements, nodes, disp, E_nodes=None):
-    """
-    Plot contours for model
-
-    Get from: https://github.com/AppliedMechanics-EAFIT/SolidsPy/blob/master/solidspy/solids_GUI.py
-
-    Parameters
-    ----------
-    nodes : ndarray (float)
-        Array with number and nodes coordinates:
-         `number coordX coordY BCX BCY`
-    elements : ndarray (int)
-        Array with the node number for the nodes that correspond
-        to each element.
-    disp : ndarray (float)
-        Array with the displacements.
-    E_nodes : ndarray (float)
-        Array with strain field in the nodes.
-
-    """
-    # Check for structural elements in the mesh
-    struct_pos = 5 in elements[:, 1] or \
-             6 in elements[:, 1] or \
-             7 in elements[:, 1]
-    if struct_pos:
-        # Still not implemented visualization for structural elements
-        print(disp)
-    else:
-        pos.plot_node_field(disp, nodes, elements, title=[r"$u_x$", r"$u_y$"],
-                        figtitle=["Horizontal displacement",
-                                  "Vertical displacement"])
-        if E_nodes is not None:
-            pos.plot_node_field(E_nodes, nodes, elements,
-                            title=[r"",
-                                   r"",
-                                   r"",],
-                            figtitle=["Strain epsilon-xx",
-                                      "Strain epsilon-yy",
-                                      "Strain gamma-xy"])

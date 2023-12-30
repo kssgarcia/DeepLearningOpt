@@ -51,7 +51,7 @@ def optimise(r1, c1, r2, c2, volfrac, bc, load):
 
     iter = 0
     # System assembly
-    stiff_mat = sparse_assem(els, mats, nodes[:, :3], neq, assem_op, kloc)
+    stiff_mat = sparse_assem(els, mats, neq, assem_op, kloc)
     rhs_vec = ass.loadasem(loads, bc_array, neq)
 
     # System solution
