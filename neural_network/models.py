@@ -7,11 +7,11 @@ from tensorflow.keras import layers
 import tensorflow as tf
 
 # %% CNN architecture
-def CNN_model(num_channels):
+def CNN_model(input_shape):
     model = Sequential()
 
     # Layers down-sampling
-    model.add(Conv2D(32, (3, 3), activation='relu', padding='same', input_shape=(61, 61, num_channels)))
+    model.add(Conv2D(32, (3, 3), activation='relu', padding='same', input_shape=input_shape))
     model.add(MaxPooling2D((2, 2)))
     model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
     model.add(MaxPooling2D((2, 2)))
@@ -31,9 +31,9 @@ def CNN_model(num_channels):
     return model
 
 # %% CNN with U-NET architecture
-def UNN_model(num_channels):
+def UNN_model(input_shape):
     # Input layer
-    input_tensor = Input(shape=(61, 61, num_channels))
+    input_tensor = Input(shape=input_shape)
     print("After Initial Convolution:", input_tensor.shape)
 
     # Initial Convolution Layer (No Padding)

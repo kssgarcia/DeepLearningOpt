@@ -29,7 +29,7 @@ output_train = output_data[:-1000]
 input_test = input_data[-1000:]
 output_test = output_data[-1000:]
 
-model = CNN_model(num_channels)
+model = CNN_model((61,61,num_channels))
 
 # %%
 

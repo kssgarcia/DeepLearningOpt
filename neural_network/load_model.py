@@ -6,15 +6,20 @@ import tensorflow as tf
 from simp_solver.SIMP import optimization
 
 # Create dummy input data
-bc = np.loadtxt('../simp/results_rand_6/bc.txt')
-load_x = np.loadtxt('../simp/results_rand_6/load_x.txt')
-load_y = np.loadtxt('../simp/results_rand_6/load_y.txt')
+bc = np.loadtxt('../simp/results_rand_7/bc.txt')
+load_x = np.loadtxt('../simp/results_rand_7/load_x.txt')
+load_y = np.loadtxt('../simp/results_rand_7/load_y.txt')
+UC_x = np.loadtxt('../simp/results_rand_7/UC_x.txt')
+UC_y = np.loadtxt('../simp/results_rand_7/UC_y.txt')
 #vol = np.loadtxt('../simp/results_merge_2/vol.txt')
-output = np.loadtxt('../simp/results_rand_6/output.txt')
+output = np.loadtxt('../simp/results_rand_7/output.txt')
+
+UC_x = UC_x / 1e12
+UC_y = UC_y / 1e12
 
 # Generate random input data
 input_shape = (61, 61)  # Input size of 61x61
-num_channels = 3  # Number of channels in each input array
+num_channels = 5  # Number of channels in each input array
 batch_size = bc.shape[0]  # Number of samples in each batch
 
 input_data = np.zeros((batch_size,) + input_shape + (num_channels,))
@@ -22,6 +27,8 @@ for i in range(batch_size):
     input_data[i, :, :, 0] = bc[i].reshape((61,61))
     input_data[i, :, :, 1] = load_x[i].reshape((61,61))
     input_data[i, :, :, 2] = load_y[i].reshape((61,61))
+    input_data[i, :, :, 3] = UC_x[i].reshape((61,61))
+    input_data[i, :, :, 4] = UC_y[i].reshape((61,61))
 
 output_train = output.reshape(output.shape[0], 60, 60)
 input_train = input_data[:-1000]
@@ -31,7 +38,7 @@ input_test = input_data[-1000:]
 output_test = output_train[-1000:]
 
 # %%
-model = tf.keras.models.load_model('../models/model_unet_rand_7')
+model = tf.keras.models.load_model('../models/model_unet_rand_8')
 model.summary()
 
 # %%

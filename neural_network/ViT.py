@@ -37,8 +37,7 @@ print(f"x_test shape: {x_test.shape} - y_test shape: {y_test.shape}")
 
 # %%
 
-num_classes = 100
-input_shape = (61, 61, 2)
+input_shape = (61, 61, num_channels)
 
 learning_rate = 0.001
 weight_decay = 0.0001
