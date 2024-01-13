@@ -37,3 +37,4 @@
 - `vit_last_100` ViT model with 100 epoch batch size small
 - `unn_last_100` U-Net model with 100 epoch batch size small
 - `model_unet_merge` U-Net model with earlyStop 5 epochs and train with results_merge_3
+- `model_rand_#` U-Net model with 50 epochs the # correspond to the number of the rand dataset

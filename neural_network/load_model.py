@@ -6,9 +6,9 @@ import tensorflow as tf
 from simp_solver.SIMP import optimization
 
 # Create dummy input data
-bc = np.loadtxt('../simp/results_merge_3/bc.txt')
-load = np.loadtxt('../simp/results_merge_3/load.txt')
-output = np.loadtxt('../simp/results_merge_3/output.txt')
+bc = np.loadtxt('../simp/results_merge_2/bc.txt')
+load = np.loadtxt('../simp/results_merge_2/load.txt')
+output = np.loadtxt('../simp/results_merge_2/output.txt')
 
 # Generate random input data
 input_shape = (61, 61)  # Input size of 61x61
@@ -32,7 +32,39 @@ model = tf.keras.models.load_model('../models/vit_last_100')
 model.summary()
 
 # %%
-test_loss, test_accuracy = model.evaluate(input_train, output_train)
+test_loss, test_accuracy = model.evaluate(input_test, output_test)
+
+# %%
+y_pred = model.predict(input_train)[:,:,:,0]
+y_true = output_train
+
+y_pred_binary = tf.round(y_pred)
+y_true_binary = tf.round(y_true)
+
+# Convert to boolean tensors for comparison
+y_true_bool = tf.cast(y_true_binary, dtype=tf.bool)
+y_pred_bool = tf.cast(y_pred_binary, dtype=tf.bool)
+
+# Calculate pixel-wise accuracy for each image
+pixel_accuracy_per_image = tf.reduce_mean(tf.cast(tf.equal(y_true_bool, y_pred_bool), dtype=tf.float32), axis=(1, 2))
+
+# Calculate global accuracy for the entire batch
+global_accuracy = tf.reduce_mean(pixel_accuracy_per_image)
+
+# Get the result as a numpy array
+global_accuracy_result = global_accuracy.numpy()
+
+print(global_accuracy_result)
+
+# %%
+# Calculate pixel-wise accuracy for each image
+pixel_accuracy_per_image = np.mean(np.equal(y_true, y_pred), axis=(1, 2))
+
+# Calculate global accuracy for the entire batch
+global_accuracy = np.mean(pixel_accuracy_per_image)
+
+# Get the result as a scalar
+print("Global Pixel Accuracy:", global_accuracy)
 
 # %%
 def custom_load(volfrac, r1, c1, r2, c2, l):
@@ -53,16 +85,17 @@ input_mod = np.concatenate((input_test, custom_load(0.6, 20, 1, 61, 1, 1)), axis
 
 y = model.predict(input_mod)
 
-index = -1
+# %%
+index = 1003
 plt.ion() 
 fig,ax = plt.subplots(1,3)
-ax[0].imshow(np.flipud(np.array(-y[index]).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
+ax[0].imshow(np.flipud(np.array(-y_pred[index]).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
 #ax[0].imshow(np.array(y_custom).reshape(60, 60), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
 ax[0].set_title('Predicted')
 ax[0].set_xticks([])
 ax[0].set_yticks([])
-#ax[1].matshow(-np.flipud(output_test[index].reshape(60, 60)), cmap='gray')
-ax[1].imshow(-np.flipud(optimization(60, 20, 1, 61, 1, 0.6).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
+ax[1].matshow(-np.flipud(output_train[index].reshape(60, 60)), cmap='gray')
+#ax[1].imshow(-np.flipud(optimization(60, 20, 1, 61, 1, 0.6).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
 ax[1].set_title('Expected')
 ax[1].set_xticks([])
 ax[1].set_yticks([])

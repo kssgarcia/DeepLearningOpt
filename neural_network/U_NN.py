@@ -31,6 +31,8 @@ output_test = output_data[-1000:]
 model = UNN_model((61,61,num_channels))
 
 # %%
+learning_rate = 0.001
+weight_decay = 0.0001
 
 checkpoint_callback = keras.callbacks.ModelCheckpoint(
     './best/cp.ckpt',
@@ -48,7 +50,11 @@ earlyStopping_callback = keras.callbacks.EarlyStopping(
     verbose=1,
 )
 
-model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+optimizer = keras.optimizers.AdamW(
+    learning_rate=learning_rate, weight_decay=weight_decay
+)
+
+model.compile(optimizer=optimizer, loss=keras.losses.BinaryFocalCrossentropy(), metrics=[keras.metrics.SparseCategoricalAccuracy(name='accuracy')])
 history = model.fit(input_test, output_test, epochs=10, batch_size=32, validation_split=0.1, callbacks=[checkpoint_callback, earlyStopping_callback])
 
 # Save the model
@@ -64,7 +70,7 @@ plt.title('Training and Validation Loss')
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
 plt.legend()
-plt.savefig('plots/loss_plot.png')  # Save the plot as an image
+plt.savefig('plots/loss_plot_sparse.png')  # Save the plot as an image
 plt.show()
 
 
@@ -76,5 +82,5 @@ plt.title('Training and Validation Accuracy')
 plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
 plt.legend()
-plt.savefig('plots/accuracy_plot.png')  # Save the plot as an image
+plt.savefig('plots/accuracy_plot_sparse.png')  # Save the plot as an image
 plt.show()
