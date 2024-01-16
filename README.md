@@ -20,6 +20,7 @@
 - `results_rand` Folder with the data random 10000
 - `results_rand4` Folder with the data random 20000 with just vertical forces
 - `results_rand5` Folder with the data random 40000 with just vertical forces
+- `results_rand_6` Folder with the data random 40000 with just vertical forces
 - `results_rand_7` Folder with the data random 40000 with just vertical forces and no volumen change 0.5 for all
 
 

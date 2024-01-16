@@ -1,5 +1,6 @@
 # %%
 import numpy as np
+import tensorflow as tf
 from tensorflow import keras
 from models import UNN_model
 import matplotlib.pyplot as plt
@@ -54,10 +55,15 @@ optimizer = keras.optimizers.AdamW(
     learning_rate=learning_rate, weight_decay=weight_decay
 )
 
-model.compile(optimizer=optimizer, loss=keras.losses.BinaryFocalCrossentropy(), metrics=[keras.metrics.SparseCategoricalAccuracy(name='accuracy')])
+def pixel_accuracy(y_true, y_pred):
+    y_true_binary = tf.round(y_true)
+    y_pred_binary = tf.round(y_pred)
+    pixel_accuracy = tf.reduce_mean(tf.cast(tf.equal(y_true_binary, y_pred_binary), dtype=tf.float32))
+    return pixel_accuracy
+
+model.compile(optimizer=optimizer, loss=keras.losses.BinaryFocalCrossentropy(), metrics=[keras.metrics.SparseCategoricalAccuracy(name='accuracy'), pixel_accuracy])
 history = model.fit(input_test, output_test, epochs=10, batch_size=32, validation_split=0.1, callbacks=[checkpoint_callback, earlyStopping_callback])
 
-# Save the model
 model.save('../models/model_unet')
 
 # %%

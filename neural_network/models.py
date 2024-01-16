@@ -74,8 +74,6 @@ def UNN_model(input_shape):
         x = BatchNormalization()(x)
         x = Conv2D(filters, (3, 3), activation='relu', padding='same')(x)
         x = BatchNormalization()(x)
-
-        x = layers.Dropout(rate=0.2)(x) # New line
         return x
 
     decoded1 = decoding_block(x, encoded3, filters=128)
