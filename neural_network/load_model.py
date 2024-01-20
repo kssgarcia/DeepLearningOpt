@@ -28,11 +28,17 @@ input_test = input_data[-1000:]
 output_test = output_train[-1000:]
 
 # %%
-model = tf.keras.models.load_model('../models/vit_last_100')
+def pixel_accuracy(y_true, y_pred):
+    y_true_binary = tf.round(y_true)
+    y_pred_binary = tf.round(y_pred)
+    pixel_accuracy = tf.reduce_mean(tf.cast(tf.equal(y_true_binary, y_pred_binary), dtype=tf.float32))
+    return pixel_accuracy
+
+model = tf.keras.models.load_model('../models/unn_merge_3', custom_objects={'pixel_accuracy': pixel_accuracy})
 model.summary()
 
 # %%
-test_loss, test_accuracy = model.evaluate(input_test, output_test)
+test_loss, test_accuracy, test_pixel_accuracy = model.evaluate(input_test, output_test)
 
 # %%
 y_pred = model.predict(input_train)[:,:,:,0]
@@ -67,13 +73,13 @@ global_accuracy = np.mean(pixel_accuracy_per_image)
 print("Global Pixel Accuracy:", global_accuracy)
 
 # %%
-def custom_load(volfrac, r1, c1, r2, c2, l):
+def custom_load(volfrac, l):
     new_input = np.zeros((1,) + (61,61) + (num_channels,))
     bc = np.ones((60+1, 60+1)) *  volfrac
     bc[:, 0] = 1
     load = np.zeros((60+1, 60+1), dtype=int)
-    load[-r1, -c1] = l
-    load[-r2, -c2] = l
+    load[-1, -1] = l
+    load[-61, -1] = l
     load[-30, -1] = l
 
     new_input[0, :, :, 0] = bc
@@ -81,21 +87,20 @@ def custom_load(volfrac, r1, c1, r2, c2, l):
     
     return new_input 
 
-input_mod = np.concatenate((input_test, custom_load(0.6, 20, 1, 61, 1, 1)), axis=0)
+input_mod = np.concatenate((input_test, custom_load(0.6, 1)), axis=0)
 
 y = model.predict(input_mod)
 
-# %%
-index = 1003
+index = -1
 plt.ion() 
 fig,ax = plt.subplots(1,3)
-ax[0].imshow(np.flipud(np.array(-y_pred[index]).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
+ax[0].imshow(np.flipud(np.array(-y[index]).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
 #ax[0].imshow(np.array(y_custom).reshape(60, 60), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
 ax[0].set_title('Predicted')
 ax[0].set_xticks([])
 ax[0].set_yticks([])
-ax[1].matshow(-np.flipud(output_train[index].reshape(60, 60)), cmap='gray')
-#ax[1].imshow(-np.flipud(optimization(60, 20, 1, 61, 1, 0.6).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
+#ax[1].matshow(-np.flipud(output_train[index].reshape(60, 60)), cmap='gray')
+ax[1].imshow(-np.flipud(optimization(60, 1, 1, 61, 1, 30, 1, 0.6).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
 ax[1].set_title('Expected')
 ax[1].set_xticks([])
 ax[1].set_yticks([])

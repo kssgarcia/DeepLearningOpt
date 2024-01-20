@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 from os import path, makedirs
 
 # Create dummy input data
-bc = np.loadtxt('../simp/results_merge_3/bc.txt')
-load = np.loadtxt('../simp/results_merge_3/load.txt')
-output = np.loadtxt('../simp/results_merge_3/output.txt')
+bc = np.loadtxt('../simp/results_merge_2/bc.txt')
+load = np.loadtxt('../simp/results_merge_2/load.txt')
+output = np.loadtxt('../simp/results_merge_2/output.txt')
 
 # Generate random input data
 input_shape = (61, 61)  # Input size of 61x61
@@ -28,6 +28,8 @@ output_train = output_data[:-1000]
 
 input_test = input_data[-1000:]
 output_test = output_data[-1000:]
+
+batch_size = input_train.shape[0]
 
 model = UNN_model((61,61,num_channels))
 
@@ -61,8 +63,8 @@ def pixel_accuracy(y_true, y_pred):
     pixel_accuracy = tf.reduce_mean(tf.cast(tf.equal(y_true_binary, y_pred_binary), dtype=tf.float32))
     return pixel_accuracy
 
-model.compile(optimizer=optimizer, loss=keras.losses.BinaryFocalCrossentropy(), metrics=[keras.metrics.SparseCategoricalAccuracy(name='accuracy'), pixel_accuracy])
-history = model.fit(input_test, output_test, epochs=10, batch_size=32, validation_split=0.1, callbacks=[checkpoint_callback, earlyStopping_callback])
+model.compile(optimizer=optimizer, loss=keras.losses.BinaryCrossentropy(), metrics=['accuracy', pixel_accuracy])
+history = model.fit(input_train[:2000], input_train[:2000], epochs=10, batch_size=32, validation_split=0.1, callbacks=[checkpoint_callback])
 
 model.save('../models/model_unet')
 
@@ -72,7 +74,7 @@ if not path.exists(dir): makedirs(dir)
 plt.figure(figsize=(10, 6))
 plt.semilogy(history.history['loss'][1:], label='Training Loss')
 #plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
-plt.title('Training and Validation Loss')
+plt.title('U-Net Training Loss')
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
 plt.legend()
@@ -84,7 +86,7 @@ plt.show()
 plt.figure(figsize=(10, 6))
 plt.semilogy(1-np.array(history.history['accuracy'])[1:], label='Training Accuracy')
 #plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
-plt.title('Training and Validation Accuracy')
+plt.title('U-Net Training  Accuracy')
 plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
 plt.legend()

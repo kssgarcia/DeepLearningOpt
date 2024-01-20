@@ -86,7 +86,9 @@ y = model.predict(input_mod)
 # %%
 
 y = model.predict(input_train)
-index = 5
+
+# %%
+index = 10
 plt.ion() 
 fig,ax = plt.subplots(1,3)
 ax[0].imshow(np.flipud(np.array(-y[index]).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))

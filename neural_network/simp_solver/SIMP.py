@@ -16,7 +16,7 @@ start_time = time.time()
 
 np.seterr(divide='ignore', invalid='ignore')
 
-def optimization(n_elem, r1, c1, r2, c2, volfrac):
+def optimization(n_elem, r1, c1, r2, c2, r3, c3, volfrac):
     # Initialize variables
     length = 60
     height = 60
@@ -29,7 +29,7 @@ def optimization(n_elem, r1, c1, r2, c2, volfrac):
 
     node_index1 = nx*r1+(r1-c1) # Change the linear 
     node_index2 = nx*r2+(r2-c2) # Change the linear 
-    node_index3 = nx*30+(30-1) # Change the linear 
+    node_index3 = nx*r3+(r3-c3) # Change the linear 
     nodes, mats, els, loads = beam(L=length, H=height, nx=nx, ny=ny, n1=node_index1, n2=node_index2, n3=node_index3)
     print(loads)
 
@@ -102,16 +102,3 @@ def optimization(n_elem, r1, c1, r2, c2, volfrac):
         change = np.linalg.norm(rho.reshape(nx*ny,1)-rho_old.reshape(nx*ny,1),np.inf)
 
     return rho
-
-def custom_load(volfrac, r1, c1, r2, c2, l):
-    new_input = np.zeros((1,) + input_shape + (num_channels,))
-    bc = np.ones((60+1, 60+1)) * volfrac
-    bc[:, 0] = 1
-    load = np.zeros((60+1, 60+1), dtype=int)
-    load[-r1, -c1] = -l
-    load[-r2, -c2] = -l
-
-    new_input[0, :, :, 0] = bc
-    new_input[0, :, :, 1] = load
-
-    return new_input 
