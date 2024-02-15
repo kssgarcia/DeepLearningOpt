@@ -4,35 +4,49 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 import tensorflow as tf
 from simp_solver.SIMP import optimization
-from models import CNN_model, UNN_model, ViT_model
+from models import CNN_model, UNN_model, ViT_model, PVT_model
 
 # Create dummy input data
-bc = np.loadtxt('../simp/results_rand_7/bc.txt')
-load_x = np.loadtxt('../simp/results_rand_7/load_x.txt')
-load_y = np.loadtxt('../simp/results_rand_7/load_y.txt')
-UC_x = np.loadtxt('../simp/results_rand_7/UC_x.txt')
-UC_y = np.loadtxt('../simp/results_rand_7/UC_y.txt')
-output = np.loadtxt('../simp/results_rand_7/output.txt')
+x1 = np.loadtxt('../simp/results_matlab/x_dataL.txt')
+load_x1 = np.loadtxt('../simp/results_matlab/load_x_dataL.txt')
+load_y1 = np.loadtxt('../simp/results_matlab/load_y_dataL.txt')
+bc1 = np.loadtxt('../simp/results_matlab/bc_dataL.txt')
+
+x2 = np.loadtxt('../simp/results_matlab/x_dataL2.txt')
+load_x2 = np.loadtxt('../simp/results_matlab/load_x_dataL2.txt')
+load_y2 = np.loadtxt('../simp/results_matlab/load_y_dataL2.txt')
+bc2 = np.loadtxt('../simp/results_matlab/bc_dataL2.txt')
+
+x = np.concatenate((x1, x2), axis=1).T
+load_x = np.concatenate((load_x1, load_x2), axis=1).T
+load_y = np.concatenate((load_y1, load_y2), axis=1).T
+bc = np.concatenate((bc1, bc2), axis=1).T
+
+print(x.shape)
+print(load_x.shape)
+print(load_y.shape)
+print(bc.shape)
 
 # Generate random input data
 input_shape = (61, 61)  # Input size of 61x61
-num_channels = 5  # Number of channels in each input array
+num_channels = 3  # Number of channels in each input array
 batch_size = bc.shape[0]  # Number of samples in each batch
 
 input_data = np.zeros((batch_size,) + input_shape + (num_channels,))
 for i in range(batch_size):
     input_data[i, :, :, 0] = bc[i].reshape((61,61))
     input_data[i, :, :, 1] = load_x[i].reshape((61,61))
-    input_data[i, :, :, 2] = load_y[i].reshape((61,61))
-    input_data[i, :, :, 3] = UC_x[i].reshape((61,61))
-    input_data[i, :, :, 4] = UC_y[i].reshape((61,61))
+    input_data[i, :, :, 1] = load_y[i].reshape((61,61))
 
-output_train = output.reshape(output.shape[0], 60, 60)
+output_data = x.reshape((x.shape[0],60,60))
+
 input_train = input_data[:-1000]
-output_train = output_train[:-1000]
+output_train = output_data[:-1000]
 
 input_test = input_data[-1000:]
-output_test = output_train[-1000:]
+output_test = output_data[-1000:]
+
+batch_size = input_train.shape[0]
 
 # %%
 '''
@@ -56,8 +70,16 @@ transformer_layers = 15
 model = ViT_model(input_shape, patch_size, num_patches, projection_dim, num_heads, transformer_units, transformer_layers)
 '''
 
-model = UNN_model((61,61,num_channels))
-model.load_weights('../models/best_models/best_unn_rand_8/cp.ckpt')
+from models import CNN_model, UNN_model, ViT_model, PVT_model
+input_shape = (61, 61, num_channels)
+
+learning_rate = 0.001
+weight_decay = 0.0001
+num_epochs = 100
+num_heads = 12
+
+model = PVT_model(input_shape, num_heads)
+model.load_weights('../models/best_models/best_pvt/best_PVT.ckpt')
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
 # %%
@@ -80,7 +102,7 @@ def custom_load(volfrac, r1, c1, r2, c2, l):
     
     return new_input 
 
-input_mod = np.concatenate((input_test, custom_load(0.6, 20, 1, 61, 1, 1)), axis=0)
+input_mod = np.concatenate((input_train[:1000], custom_load(0.6, 20, 1, 61, 1, 1)), axis=0)
 y = model.predict(input_mod)
 
 # %%
@@ -88,7 +110,7 @@ y = model.predict(input_mod)
 y = model.predict(input_train)
 
 # %%
-index = 10
+index = 100
 plt.ion() 
 fig,ax = plt.subplots(1,3)
 ax[0].imshow(np.flipud(np.array(-y[index]).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))

@@ -7,44 +7,60 @@ from models import PVT_model
 import matplotlib.pyplot as plt
 from os import path, makedirs
 
-# Create dummy input data
-bc = np.loadtxt('../simp/results_merge_2/bc.txt')
-load = np.loadtxt('../simp/results_merge_2/load.txt')
-output = np.loadtxt('../simp/results_merge_2/output.txt')
+x1 = np.loadtxt('../matlab_simp/x_dataL.txt')
+load_x1 = np.loadtxt('../matlab_simp/load_x_dataL.txt')
+load_y1 = np.loadtxt('../matlab_simp/load_y_dataL.txt')
+vol1 = np.loadtxt('../matlab_simp/vol_dataL.txt')
+bc1 = np.loadtxt('../matlab_simp/bc_dataL.txt')
 
-# Generate random input data
+x2 = np.loadtxt('../matlab_simp/x_dataL2.txt')
+load_x2 = np.loadtxt('../matlab_simp/load_x_dataL2.txt')
+load_y2 = np.loadtxt('../matlab_simp/load_y_dataL2.txt')
+vol2 = np.loadtxt('../matlab_simp/vol_dataL2.txt')
+bc2 = np.loadtxt('../matlab_simp/bc_dataL2.txt')
+
+x3 = np.loadtxt('../matlab_simp/x_dataL3.txt')
+load_x3 = np.loadtxt('../matlab_simp/load_x_dataL3.txt')
+load_y3 = np.loadtxt('../matlab_simp/load_y_dataL3.txt')
+vol3 = np.loadtxt('../matlab_simp/vol_dataL3.txt')
+bc3 = np.loadtxt('../matlab_simp/bc_dataL3.txt')
+
+x = np.concatenate((x1, x2, x3), axis=1).T
+load_x = np.concatenate((load_x1, load_x2, load_x3), axis=1).T
+load_y = np.concatenate((load_y1, load_y2, load_y3), axis=1).T
+vol = np.concatenate((vol1, vol2, vol3), axis=1).T
+bc = np.concatenate((bc1, bc2, bc3), axis=1).T
+
 input_shape = (61, 61)  # Input size of 61x61
-num_channels = 2  # Number of channels in each input array
+num_channels = 4  # Number of channels in each input array
 batch_size = bc.shape[0]  # Number of samples in each batch
 
 input_data = np.zeros((batch_size,) + input_shape + (num_channels,))
 for i in range(batch_size):
     input_data[i, :, :, 0] = bc[i].reshape((61,61))
-    input_data[i, :, :, 1] = load[i].reshape((61,61))
-
-output_data = output.reshape((output.shape[0],60,60))
+    input_data[i, :, :, 1] = vol[i].reshape((61,61))
+    input_data[i, :, :, 2] = load_x[i].reshape((61,61))
+    input_data[i, :, :, 3] = load_y[i].reshape((61,61))
+output_data = x.reshape((x.shape[0],60,60))
 
 input_train = input_data[:-1000]
 output_train = output_data[:-1000]
 
-input_test = input_data[-1000:]
-output_test = output_data[-1000:]
+input_val = input_data[-1000:]
+output_val = output_data[-1000:]
 
 batch_size = input_train.shape[0]
-
-# %%
 
 input_shape = (61, 61, num_channels)
 
 learning_rate = 0.001
 weight_decay = 0.0001
-num_epochs = 100
 num_heads = 12
 
 model = PVT_model(input_shape, num_heads)
 
 checkpoint_callback = keras.callbacks.ModelCheckpoint(
-    './best/best_PVT.ckpt',
+    './best_matlab_PVT/cp.ckpt',
     monitor="val_accuracy",
     mode="max",
     save_best_only=True,
@@ -64,15 +80,16 @@ optimizer = keras.optimizers.AdamW(
 )
 
 model.compile(optimizer=optimizer, loss=keras.losses.BinaryCrossentropy(), metrics=['accuracy'])
-history = model.fit(input_train, output_train, epochs=50, batch_size=32, validation_split=0.1, callbacks=[checkpoint_callback])
+history = model.fit(input_train, output_train, epochs=50, batch_size=32, validation_data=[input_val, output_val], callbacks=[checkpoint_callback])
 
-# %%
+# Save the model
+model.save('../models/pvt_matlab')
 
 dir = './plots'
 if not path.exists(dir): makedirs(dir)
 plt.figure(figsize=(10, 6))
 plt.semilogy(history.history['loss'][1:], label='Training Loss')
-#plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
 plt.title('ViT Training Loss')
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
@@ -80,11 +97,10 @@ plt.legend()
 plt.savefig('plots/loss_PVT.png')  # Save the plot as an image
 plt.show()
 
-
 # Plotting training and validation accuracy
 plt.figure(figsize=(10, 6))
 plt.semilogy(1-np.array(history.history['accuracy'])[1:], label='Training Accuracy')
-#plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
 plt.title('ViT Training Accuracy')
 plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
