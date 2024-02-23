@@ -6,69 +6,45 @@ import tensorflow as tf
 from simp_solver.SIMP import optimization
 from models import CNN_model, UNN_model, ViT_model, PVT_model
 
-# Create dummy input data
 x1 = np.loadtxt('../simp/results_matlab/x_dataL.txt')
 load_x1 = np.loadtxt('../simp/results_matlab/load_x_dataL.txt')
 load_y1 = np.loadtxt('../simp/results_matlab/load_y_dataL.txt')
+vol1 = np.loadtxt('../simp/results_matlab/vol_dataL.txt')
 bc1 = np.loadtxt('../simp/results_matlab/bc_dataL.txt')
 
 x2 = np.loadtxt('../simp/results_matlab/x_dataL2.txt')
 load_x2 = np.loadtxt('../simp/results_matlab/load_x_dataL2.txt')
 load_y2 = np.loadtxt('../simp/results_matlab/load_y_dataL2.txt')
+vol2 = np.loadtxt('../simp/results_matlab/vol_dataL2.txt')
 bc2 = np.loadtxt('../simp/results_matlab/bc_dataL2.txt')
 
 x = np.concatenate((x1, x2), axis=1).T
 load_x = np.concatenate((load_x1, load_x2), axis=1).T
 load_y = np.concatenate((load_y1, load_y2), axis=1).T
+vol = np.concatenate((vol1, vol2), axis=1).T
 bc = np.concatenate((bc1, bc2), axis=1).T
 
-print(x.shape)
-print(load_x.shape)
-print(load_y.shape)
-print(bc.shape)
-
-# Generate random input data
 input_shape = (61, 61)  # Input size of 61x61
-num_channels = 3  # Number of channels in each input array
+num_channels = 4  # Number of channels in each input array
 batch_size = bc.shape[0]  # Number of samples in each batch
 
 input_data = np.zeros((batch_size,) + input_shape + (num_channels,))
 for i in range(batch_size):
     input_data[i, :, :, 0] = bc[i].reshape((61,61))
-    input_data[i, :, :, 1] = load_x[i].reshape((61,61))
-    input_data[i, :, :, 1] = load_y[i].reshape((61,61))
-
+    input_data[i, :, :, 1] = vol[i].reshape((61,61))
+    input_data[i, :, :, 2] = load_x[i].reshape((61,61))
+    input_data[i, :, :, 3] = load_y[i].reshape((61,61))
 output_data = x.reshape((x.shape[0],60,60))
 
 input_train = input_data[:-1000]
 output_train = output_data[:-1000]
 
-input_test = input_data[-1000:]
-output_test = output_data[-1000:]
+input_val = input_data[-1000:]
+output_val = output_data[-1000:]
 
 batch_size = input_train.shape[0]
 
 # %%
-'''
-num_classes = 100
-input_shape = (61, 61, 2)
-
-learning_rate = 0.001
-weight_decay = 0.0001
-num_epochs = 100
-image_size = 60  # We'll resize input images to this size
-patch_size = 10  # Size of the patches to be extract from the input images
-num_patches = (image_size // patch_size) ** 2
-projection_dim = 64
-num_heads = 12
-transformer_units = [
-    projection_dim * 2,
-    projection_dim,
-]  # Size of the transformer layers
-transformer_layers = 15
-
-model = ViT_model(input_shape, patch_size, num_patches, projection_dim, num_heads, transformer_units, transformer_layers)
-'''
 
 from models import CNN_model, UNN_model, ViT_model, PVT_model
 input_shape = (61, 61, num_channels)
@@ -79,11 +55,11 @@ num_epochs = 100
 num_heads = 12
 
 model = PVT_model(input_shape, num_heads)
-model.load_weights('../models/best_models/best_pvt/best_PVT.ckpt')
+model.load_weights('../models/best_models/best_matlab_PVT/cp.ckpt')
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
 # %%
-test_loss, test_accuracy = model.evaluate(input_test, output_test)
+test_loss, test_accuracy = model.evaluate(input_val, output_val)
 
 # %%
 def custom_load(volfrac, r1, c1, r2, c2, l):
@@ -107,7 +83,7 @@ y = model.predict(input_mod)
 
 # %%
 
-y = model.predict(input_train)
+y = model.predict(input_val)
 
 # %%
 index = 100
@@ -118,7 +94,7 @@ ax[0].imshow(np.flipud(np.array(-y[index]).reshape(60, 60)), cmap='gray', interp
 ax[0].set_title('Predicted')
 ax[0].set_xticks([])
 ax[0].set_yticks([])
-ax[1].matshow(-np.flipud(output_test[index].reshape(60, 60)), cmap='gray')
+ax[1].matshow(-np.flipud(output_val[index].reshape(60, 60)), cmap='gray')
 #ax[1].imshow(-np.flipud(optimization(60, 20, 1, 61, 1, 0.6).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
 ax[1].set_title('Expected')
 ax[1].set_xticks([])

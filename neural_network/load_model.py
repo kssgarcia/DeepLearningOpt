@@ -17,7 +17,6 @@ load_y2 = np.loadtxt('../simp/results_matlab/load_y_dataL2.txt')
 vol2 = np.loadtxt('../simp/results_matlab/vol_dataL2.txt')
 bc2 = np.loadtxt('../simp/results_matlab/bc_dataL2.txt')
 
-
 x = np.concatenate((x1, x2), axis=1).T
 load_x = np.concatenate((load_x1, load_x2), axis=1).T
 load_y = np.concatenate((load_y1, load_y2), axis=1).T
@@ -52,7 +51,7 @@ def pixel_accuracy(y_true, y_pred):
     return pixel_accuracy
 
 #model = tf.keras.models.load_model('../models/unn_merge_3', custom_objects={'pixel_accuracy': pixel_accuracy})
-model = tf.keras.models.load_model('../models/unn_matlab')
+model = tf.keras.models.load_model('../models/pvt_matlab')
 model.summary()
 
 # %%
@@ -93,26 +92,35 @@ print("Global Pixel Accuracy:", global_accuracy)
 # %%
 def custom_load(volfrac, l):
     new_input = np.zeros((1,) + (61,61) + (num_channels,))
-    bc = np.ones((60+1, 60+1)) *  volfrac
-    bc[:, 0] = 1
-    load = np.zeros((60+1, 60+1), dtype=int)
-    load[-1, -1] = l
-    load[-61, -1] = l
-    load[-30, -1] = l
+
+    bc = np.zeros((60+1, 60+1))
+    bc[0, :] = 1
+
+    vol = np.ones((60+1, 60+1)) * volfrac
+
+    load_y = np.zeros((60+1, 60+1), dtype=int)
+    load_y[40, -1] = l
+    load_y[-1, 30] = l
+    load_y[40, 0] = l
+    load_x = np.zeros((60+1, 60+1), dtype=int)
+
+    plt.figure()
+    plt.matshow(load_y, cmap='gray')
+    plt.show()
 
     new_input[0, :, :, 0] = bc
-    new_input[0, :, :, 1] = load
+    new_input[0, :, :, 1] = vol
+    new_input[0, :, :, 2] = load_x
+    new_input[0, :, :, 3] = load_y
     
     return new_input 
 
-#input_mod = np.concatenate((input_val, custom_load(0.6, 1)), axis=0)
 
+#y = model.predict(custom_load(0.6, 1))
 y = model.predict(input_val)
 
-
 # %%
-
-index = 2
+index = 10
 plt.ion() 
 fig,ax = plt.subplots(1,3)
 ax[0].imshow(np.array(-y[index]).reshape(60, 60).T, cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
@@ -124,6 +132,7 @@ ax[1].matshow(-output_val[index].reshape(60, 60).T, cmap='gray')
 ax[1].set_title('Expected')
 ax[1].set_xticks([])
 ax[1].set_yticks([])
+# Hacer una grafica con la convolucion
 ax[2].matshow(load_x[index].reshape(61, 61).T, cmap='gray')
 ax[2].set_title('Load point')
 ax[2].set_xticks([])
