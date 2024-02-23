@@ -3,7 +3,7 @@ import os
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
-from models import DETR_model
+from models import DETR_model_simple
 import matplotlib.pyplot as plt
 from os import path, makedirs
 
@@ -66,7 +66,7 @@ transformer_units = [
 ]  # Size of the transformer layers
 transformer_layers = 20
 
-model = DETR_model(input_shape, patch_size, num_patches, projection_dim, num_heads, transformer_units, transformer_layers)
+model = DETR_model_simple(input_shape, patch_size, num_patches, projection_dim, num_heads, transformer_units, transformer_layers)
 
 checkpoint_callback = keras.callbacks.ModelCheckpoint(
     './best_matlab_detr/cp.ckpt',

@@ -4,6 +4,7 @@ from tensorflow.keras.layers import Input, Conv2D, BatchNormalization, MaxPoolin
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, UpSampling2D, Dense, Flatten
 from tensorflow.keras import layers
+from tensorflow.keras.applications import ResNet50
 import tensorflow as tf
 
 # %% CNN architecture
@@ -136,10 +137,10 @@ def mlp(x, hidden_units, dropout_rate):
         x = layers.Dropout(dropout_rate)(x)
     return x
 
-def decoding_block(input_layer, filters, strides):
-    x = layers.Conv2DTranspose(filters, (strides, strides), strides=(strides, strides), activation='relu', padding='same')(input_layer)
+def decoding_block(input_layer, filters, strides, trainable=False):
+    x = layers.Conv2DTranspose(filters, (strides, strides), strides=(strides, strides), activation='relu', padding='same', trainable=trainable)(input_layer)
     x = layers.BatchNormalization()(x)
-    x = layers.Conv2D(filters, (3, 3), activation='relu', padding='same')(x)
+    x = layers.Conv2D(filters, (3, 3), activation='relu', padding='same', trainable=trainable)(x)
     x = layers.BatchNormalization()(x)
     return x
 
@@ -173,8 +174,8 @@ def ViT_model(input_shape, patch_size, num_patches, projection_dim, num_heads, t
 
     resize1 = tf.reshape(representation, [-1, 6, 6, projection_dim])
 
-    decoded1 = decoding_block(resize1, 64, 5)
-    decoded2 = decoding_block(decoded1, 32, 2)
+    decoded1 = decoding_block(resize1, 64, 5, True)
+    decoded2 = decoding_block(decoded1, 32, 2, True)
 
     output_tensor = layers.Conv2D(1, (1, 1), activation='sigmoid')(decoded2)
 
@@ -240,13 +241,121 @@ def PVT_model(input_shape, num_heads):
     encoded_transform3 = transformer_block(encoded_transform2, num_heads, 256)
 
     # Create multiple layers of the decoding block
-    decoded1 = decoding_block(encoded_transform3, 128, 2)
-    decoded2 = decoding_block(decoded1, 64, 2)
-    decoded3 = decoding_block(decoded2, 32, 3)
+    decoded1 = decoding_block(encoded_transform3, 128, 2, True)
+    decoded2 = decoding_block(decoded1, 64, 2, True)
+    decoded3 = decoding_block(decoded2, 32, 3, True)
 
     output_tensor = layers.Conv2D(1, (1, 1), activation='sigmoid')(decoded3)
 
     model = keras.Model(inputs=inputs, outputs=output_tensor)
 
+    model.summary()
+    return model
+
+# %% DETR
+
+def DETR_model(input_shape, patch_size, num_patches, projection_dim, num_heads, transformer_units, transformer_layers):
+    inputs = layers.Input(shape=input_shape)
+
+    backbone = ResNet50(weights='imagenet', include_top=False, input_tensor=inputs)
+    #backbone = ResNet50Backbone(name='backbone')
+
+    for layer in backbone.layers:
+        layer.trainable = False
+
+    backbone_block = backbone(inputs, training=False)
+
+    decoded1 = decoding_block(backbone_block, 1792, 5)
+    decoded2 = decoding_block(decoded1, 1536, 3)
+    decoded3 = decoding_block(decoded2, 1280, 2)
+
+    # Create patches.
+    patches = Patches(patch_size)(decoded3)
+    # Encode patches.
+    encoded_patches = PatchEncoder(num_patches, projection_dim)(patches)
+
+    # Create multiple layers of the Transformer block.
+    for _ in range(transformer_layers):
+        # Layer normalization 1.
+        x1 = layers.LayerNormalization(epsilon=1e-6)(encoded_patches)
+        # Create a multi-head attention layer.
+        attention_output = layers.MultiHeadAttention(
+            num_heads=num_heads, key_dim=projection_dim, dropout=0.1
+        )(x1, x1)
+        # Skip connection 1.
+        x2 = layers.Add()([attention_output, encoded_patches])
+        # Layer normalization 2.
+        x3 = layers.LayerNormalization(epsilon=1e-6)(x2)
+        # MLP.
+        x3 = mlp(x3, hidden_units=transformer_units, dropout_rate=0.1)
+        # Skip connection 2.
+        encoded_patches = layers.Add()([x3, x2])
+
+    # Create a [batch_size, projection_dim] tensor.
+    representation = layers.LayerNormalization(epsilon=1e-6)(encoded_patches)
+
+    resize1 = tf.reshape(representation, [-1, 6, 6, projection_dim])
+
+    decoded1 = decoding_block(resize1, 64, 5)
+    decoded2 = decoding_block(decoded1, 32, 2)
+
+    output_tensor = layers.Conv2D(1, (1, 1), activation='sigmoid')(decoded2)
+
+    model = keras.Model(inputs=inputs, outputs=output_tensor)
+    model.summary()
+    return model
+
+# %% DETR simple
+
+def DETR_model_simple(input_shape, patch_size, num_patches, projection_dim, num_heads, transformer_units, transformer_layers):
+    inputs = layers.Input(shape=input_shape)
+    initial = layers.Conv2D(2, kernel_size=(2, 2), activation='relu', padding='valid')(inputs)
+
+    down1 = MaxPooling2D((2, 2))(initial)
+    down2 = Conv2D(32, (3, 3), activation='relu', padding='same', input_shape=input_shape)(down1)
+    down3 = MaxPooling2D((2, 2))(down2)
+    down4 = Conv2D(128, (3, 3), activation='relu', padding='same', input_shape=input_shape)(down3)
+    down5 = MaxPooling2D((3, 3))(down4)
+
+    up1 = UpSampling2D((3, 3))(down5)
+    up2 = Conv2D(128, (3, 3), activation='relu', padding='same', input_shape=input_shape)(up1)
+    up3 = UpSampling2D((2, 2))(up2)
+    up4 = Conv2D(64, (3, 3), activation='relu', padding='same', input_shape=input_shape)(up3)
+    up5 = UpSampling2D((2, 2))(up4)
+    up6 = Conv2D(32, (3, 3), activation='relu', padding='same', input_shape=input_shape)(up5)
+
+    # Create patches.
+    patches = Patches(patch_size)(up6)
+    # Encode patches.
+    encoded_patches = PatchEncoder(num_patches, projection_dim)(patches)
+
+    # Create multiple layers of the Transformer block.
+    for _ in range(transformer_layers):
+        # Layer normalization 1.
+        x1 = layers.LayerNormalization(epsilon=1e-6)(encoded_patches)
+        # Create a multi-head attention layer.
+        attention_output = layers.MultiHeadAttention(
+            num_heads=num_heads, key_dim=projection_dim, dropout=0.1
+        )(x1, x1)
+        # Skip connection 1.
+        x2 = layers.Add()([attention_output, encoded_patches])
+        # Layer normalization 2.
+        x3 = layers.LayerNormalization(epsilon=1e-6)(x2)
+        # MLP.
+        x3 = mlp(x3, hidden_units=transformer_units, dropout_rate=0.1)
+        # Skip connection 2.
+        encoded_patches = layers.Add()([x3, x2])
+
+    # Create a [batch_size, projection_dim] tensor.
+    representation = layers.LayerNormalization(epsilon=1e-6)(encoded_patches)
+
+    resize1 = tf.reshape(representation, [-1, 6, 6, projection_dim])
+
+    decoded1 = decoding_block(resize1, 64, 5)
+    decoded2 = decoding_block(decoded1, 32, 2)
+
+    output_tensor = layers.Conv2D(1, (1, 1), activation='sigmoid')(decoded2)
+
+    model = keras.Model(inputs=inputs, outputs=output_tensor)
     model.summary()
     return model

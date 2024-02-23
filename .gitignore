@@ -20,3 +20,5 @@ models
 **/results_matlab
 **/plots
 **/best
+neural_network/custom_layers.py
+neural_network/resnet_backbone.py
