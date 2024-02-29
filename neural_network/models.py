@@ -1,3 +1,4 @@
+# %%
 from tensorflow import keras
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Conv2D, BatchNormalization, MaxPooling2D, concatenate, Conv2DTranspose
@@ -104,7 +105,6 @@ class Patches(layers.Layer):
         self.patch_size = patch_size
 
     def call(self, images):
-        batch_size = tf.shape(images)[0]
         patches = tf.image.extract_patches(
             images=images,
             sizes=[1, self.patch_size, self.patch_size, 1],
@@ -114,7 +114,7 @@ class Patches(layers.Layer):
         )
         patch_dims = patches.shape[-1]
         H = patches.shape[1]
-        patches = tf.reshape(patches, [batch_size, H*H, patch_dims])
+        patches = tf.reshape(patches, [-1, H*H, patch_dims])
         return patches
 
 class PatchEncoder(layers.Layer):
@@ -169,7 +169,6 @@ def ViT_model(input_shape, patch_size, num_patches, projection_dim, num_heads, t
         # Skip connection 2.
         encoded_patches = layers.Add()([x3, x2])
 
-    # Create a [batch_size, projection_dim] tensor.
     representation = layers.LayerNormalization(epsilon=1e-6)(encoded_patches)
 
     resize1 = tf.reshape(representation, [-1, 6, 6, projection_dim])
@@ -257,20 +256,58 @@ def PVT_model(input_shape, num_heads):
 def DETR_model(input_shape, patch_size, num_patches, projection_dim, num_heads, transformer_units, transformer_layers):
     inputs = layers.Input(shape=input_shape)
 
-    backbone = ResNet50(weights='imagenet', include_top=False, input_tensor=inputs)
-    #backbone = ResNet50Backbone(name='backbone')
+    # Initial Convolution Layer (No Padding)
+    initial = Conv2D(32, kernel_size=(2, 2), activation='relu', padding='valid')(inputs)
+    initial = BatchNormalization()(initial)
 
-    for layer in backbone.layers:
-        layer.trainable = False
+    # Encoding Blocks
+    def encoding_block(input_layer, filters):
+        x = Conv2D(filters, (3, 3), activation='relu', padding='same')(input_layer)
+        x = BatchNormalization()(x)
+        x = Conv2D(filters, (3, 3), activation='relu', padding='same')(x)
+        x = BatchNormalization()(x)
+        if x.shape[1] == 15:
+            encoded = MaxPooling2D((3, 3))(x)
+        else:
+            encoded = MaxPooling2D((2, 2))(x)
 
-    backbone_block = backbone(inputs, training=False)
+        return encoded
 
-    decoded1 = decoding_block(backbone_block, 1792, 5)
-    decoded2 = decoding_block(decoded1, 1536, 3)
-    decoded3 = decoding_block(decoded2, 1280, 2)
+    encoded1 = encoding_block(initial, filters=64)
+    encoded2 = encoding_block(encoded1, filters=128)
+    encoded3 = encoding_block(encoded2, filters=256)
+
+    # Additional Convolution Layers for Feature Maps
+    x = Conv2D(256, kernel_size=(7, 7), activation='relu', padding='same')(encoded3)
+    x = BatchNormalization()(x)
+    x = Conv2D(256, kernel_size=(7, 7), activation='relu', padding='same')(x)
+    x = BatchNormalization()(x)
+
+    # Decoding Blocks
+    def decoding_blockdetr(input_layer, concat_layer, filters):
+        x = concatenate([input_layer, concat_layer], axis=-1)
+        if x.shape[1] == 5:
+            x = Conv2DTranspose(filters, (3, 3), strides=(3,3), activation='relu', padding='same')(x)
+        else:
+            x = Conv2DTranspose(filters, (2, 2), strides=(2,2), activation='relu', padding='same')(x)
+        x = BatchNormalization()(x)
+        x = Conv2D(filters, (3, 3), activation='relu', padding='same')(x)
+        x = BatchNormalization()(x)
+        return x
+
+    decoded1 = decoding_blockdetr(x, encoded3, filters=128)
+    decoded2 = decoding_blockdetr(decoded1, encoded2, filters=64)
+    decoded3 = decoding_blockdetr(decoded2, encoded1, filters=32)
+
+    # Final Convolution Layers for Element Solution
+    x = concatenate([decoded3, initial], axis=-1)
+    x = Conv2D(32, kernel_size=(7, 7), activation='relu', padding='same')(x)
+    x = BatchNormalization()(x)
+    x = Conv2D(32, kernel_size=(7, 7), activation='relu', padding='same')(x)
+    x = BatchNormalization()(x)
 
     # Create patches.
-    patches = Patches(patch_size)(decoded3)
+    patches = Patches(patch_size)(x)
     # Encode patches.
     encoded_patches = PatchEncoder(num_patches, projection_dim)(patches)
 
@@ -280,7 +317,7 @@ def DETR_model(input_shape, patch_size, num_patches, projection_dim, num_heads, 
         x1 = layers.LayerNormalization(epsilon=1e-6)(encoded_patches)
         # Create a multi-head attention layer.
         attention_output = layers.MultiHeadAttention(
-            num_heads=num_heads, key_dim=projection_dim, dropout=0.1
+            num_heads=num_heads, key_dim=projection_dim
         )(x1, x1)
         # Skip connection 1.
         x2 = layers.Add()([attention_output, encoded_patches])
@@ -291,7 +328,6 @@ def DETR_model(input_shape, patch_size, num_patches, projection_dim, num_heads, 
         # Skip connection 2.
         encoded_patches = layers.Add()([x3, x2])
 
-    # Create a [batch_size, projection_dim] tensor.
     representation = layers.LayerNormalization(epsilon=1e-6)(encoded_patches)
 
     resize1 = tf.reshape(representation, [-1, 6, 6, projection_dim])
@@ -305,56 +341,82 @@ def DETR_model(input_shape, patch_size, num_patches, projection_dim, num_heads, 
     model.summary()
     return model
 
+if __name__ == '__main__':
+    input_shape = (61, 61, 4)
+    patch_size = 16
+    num_patches = (256 // patch_size) ** 2
+    projection_dim = 64
+    num_heads = 4
+    transformer_units = [projection_dim * 2, projection_dim]
+    transformer_layers = 8
+
+    model = DETR_model(input_shape, patch_size, num_patches, projection_dim, num_heads, transformer_units, transformer_layers)
+
 # %% DETR simple
 
 def DETR_model_simple(input_shape, patch_size, num_patches, projection_dim, num_heads, transformer_units, transformer_layers):
     inputs = layers.Input(shape=input_shape)
-    initial = layers.Conv2D(2, kernel_size=(2, 2), activation='relu', padding='valid')(inputs)
 
-    down1 = MaxPooling2D((2, 2))(initial)
-    down2 = Conv2D(32, (3, 3), activation='relu', padding='same', input_shape=input_shape)(down1)
-    down3 = MaxPooling2D((2, 2))(down2)
-    down4 = Conv2D(128, (3, 3), activation='relu', padding='same', input_shape=input_shape)(down3)
-    down5 = MaxPooling2D((3, 3))(down4)
+    # Initial Convolution Layer (No Padding)
+    initial = Conv2D(32, kernel_size=(2, 2), activation='relu', padding='valid')(inputs)
+    initial = BatchNormalization()(initial)
 
-    up1 = UpSampling2D((3, 3))(down5)
-    up2 = Conv2D(128, (3, 3), activation='relu', padding='same', input_shape=input_shape)(up1)
-    up3 = UpSampling2D((2, 2))(up2)
-    up4 = Conv2D(64, (3, 3), activation='relu', padding='same', input_shape=input_shape)(up3)
-    up5 = UpSampling2D((2, 2))(up4)
-    up6 = Conv2D(32, (3, 3), activation='relu', padding='same', input_shape=input_shape)(up5)
+    # Encoding Blocks
+    def encoding_block(input_layer, filters):
+        x = Conv2D(filters, (3, 3), activation='relu', padding='same')(input_layer)
+        x = BatchNormalization()(x)
+        x = Conv2D(filters, (3, 3), activation='relu', padding='same')(x)
+        x = BatchNormalization()(x)
+        if x.shape[1] == 15:
+            encoded = MaxPooling2D((3, 3))(x)
+        else:
+            encoded = MaxPooling2D((2, 2))(x)
 
-    # Create patches.
-    patches = Patches(patch_size)(up6)
-    # Encode patches.
-    encoded_patches = PatchEncoder(num_patches, projection_dim)(patches)
+        return encoded
 
-    # Create multiple layers of the Transformer block.
-    for _ in range(transformer_layers):
-        # Layer normalization 1.
-        x1 = layers.LayerNormalization(epsilon=1e-6)(encoded_patches)
-        # Create a multi-head attention layer.
-        attention_output = layers.MultiHeadAttention(
-            num_heads=num_heads, key_dim=projection_dim, dropout=0.1
-        )(x1, x1)
-        # Skip connection 1.
-        x2 = layers.Add()([attention_output, encoded_patches])
-        # Layer normalization 2.
-        x3 = layers.LayerNormalization(epsilon=1e-6)(x2)
-        # MLP.
-        x3 = mlp(x3, hidden_units=transformer_units, dropout_rate=0.1)
-        # Skip connection 2.
-        encoded_patches = layers.Add()([x3, x2])
+    encoded1 = encoding_block(initial, filters=64)
+    encoded2 = encoding_block(encoded1, filters=128)
+    encoded3 = encoding_block(encoded2, filters=256)
 
-    # Create a [batch_size, projection_dim] tensor.
-    representation = layers.LayerNormalization(epsilon=1e-6)(encoded_patches)
+    # Additional Convolution Layers for Feature Maps
+    x = Conv2D(256, kernel_size=(7, 7), activation='relu', padding='same')(encoded3)
+    x = BatchNormalization()(x)
+    x = Conv2D(256, kernel_size=(7, 7), activation='relu', padding='same')(x)
+    x = BatchNormalization()(x)
 
-    resize1 = tf.reshape(representation, [-1, 6, 6, projection_dim])
+    # Decoding Blocks
+    def decoding_blockdetr(input_layer, concat_layer, filters):
+        x = concatenate([input_layer, concat_layer], axis=-1)
+        if x.shape[1] == 5:
+            x = Conv2DTranspose(filters, (3, 3), strides=(3,3), activation='relu', padding='same')(x)
+        else:
+            x = Conv2DTranspose(filters, (2, 2), strides=(2,2), activation='relu', padding='same')(x)
+        x = BatchNormalization()(x)
+        x = Conv2D(filters, (3, 3), activation='relu', padding='same')(x)
+        x = BatchNormalization()(x)
+        return x
 
-    decoded1 = decoding_block(resize1, 64, 5)
-    decoded2 = decoding_block(decoded1, 32, 2)
+    decoded1 = decoding_blockdetr(x, encoded3, filters=128)
+    decoded2 = decoding_blockdetr(decoded1, encoded2, filters=64)
+    decoded3 = decoding_blockdetr(decoded2, encoded1, filters=32)
 
-    output_tensor = layers.Conv2D(1, (1, 1), activation='sigmoid')(decoded2)
+    # Final Convolution Layers for Element Solution
+    x = concatenate([decoded3, initial], axis=-1)
+    x = Conv2D(32, kernel_size=(7, 7), activation='relu', padding='same')(x)
+    x = BatchNormalization()(x)
+    x = Conv2D(32, kernel_size=(7, 7), activation='relu', padding='same')(x)
+    x = BatchNormalization()(x)
+
+    encoded_transform1 = transformer_block(x, num_heads, 64)
+    encoded_transform2 = transformer_block(encoded_transform1, num_heads, 128)
+    encoded_transform3 = transformer_block(encoded_transform2, num_heads, 256)
+
+    # Create multiple layers of the decoding block
+    decoded1 = decoding_block(encoded_transform3, 128, 2, True)
+    decoded2 = decoding_block(decoded1, 64, 2, True)
+    decoded3 = decoding_block(decoded2, 32, 3, True)
+
+    output_tensor = layers.Conv2D(1, (1, 1), activation='sigmoid')(decoded3)
 
     model = keras.Model(inputs=inputs, outputs=output_tensor)
     model.summary()

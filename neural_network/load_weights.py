@@ -46,16 +46,24 @@ batch_size = input_train.shape[0]
 
 # %%
 
-from models import CNN_model, UNN_model, ViT_model, PVT_model
+from models import CNN_model, UNN_model, ViT_model, PVT_model, DETR_model_simple
 input_shape = (61, 61, num_channels)
 
 learning_rate = 0.001
 weight_decay = 0.0001
-num_epochs = 100
-num_heads = 12
+image_size = 60  # We'll resize input images to this size
+patch_size = 10  # Size of the patches to be extract from the input images
+num_patches = (image_size // patch_size) ** 2
+projection_dim = 64
+num_heads = 15
+transformer_units = [
+    projection_dim * 2,
+    projection_dim,
+]  # Size of the transformer layers
+transformer_layers = 20
 
-model = PVT_model(input_shape, num_heads)
-model.load_weights('../models/best_models/best_matlab_PVT/cp.ckpt')
+model = DETR_model_simple(input_shape, patch_size, num_patches, projection_dim, num_heads, transformer_units, transformer_layers)
+model.load_weights('../models/best_models/best_matlab_detr_simple/cp.ckpt')
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
 # %%
@@ -83,10 +91,10 @@ y = model.predict(input_mod)
 
 # %%
 
-y = model.predict(input_val)
+y = model.predict(input_train)
 
 # %%
-index = 100
+index = 300
 plt.ion() 
 fig,ax = plt.subplots(1,3)
 ax[0].imshow(np.flipud(np.array(-y[index]).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
@@ -94,7 +102,7 @@ ax[0].imshow(np.flipud(np.array(-y[index]).reshape(60, 60)), cmap='gray', interp
 ax[0].set_title('Predicted')
 ax[0].set_xticks([])
 ax[0].set_yticks([])
-ax[1].matshow(-np.flipud(output_val[index].reshape(60, 60)), cmap='gray')
+ax[1].matshow(-np.flipud(output_train[index].reshape(60, 60)), cmap='gray')
 #ax[1].imshow(-np.flipud(optimization(60, 20, 1, 61, 1, 0.6).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
 ax[1].set_title('Expected')
 ax[1].set_xticks([])
