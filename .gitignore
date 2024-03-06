@@ -22,3 +22,5 @@ models
 **/best
 neural_network/custom_layers.py
 neural_network/resnet_backbone.py
+neural_network/testUNN.py
+neural_network/testViT.py
