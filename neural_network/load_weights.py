@@ -46,7 +46,7 @@ batch_size = input_train.shape[0]
 
 # %%
 
-from models import CNN_model, UNN_model, ViT_model, PVT_model, DETR_model_simple
+from models import CNN_model, UNN_model, ViT_model, PVT_model, DETR_model
 input_shape = (61, 61, num_channels)
 
 learning_rate = 0.001
@@ -62,8 +62,8 @@ transformer_units = [
 ]  # Size of the transformer layers
 transformer_layers = 20
 
-model = DETR_model_simple(input_shape, patch_size, num_patches, projection_dim, num_heads, transformer_units, transformer_layers)
-model.load_weights('../models/best_models/best_matlab_detr_simple/cp.ckpt')
+model = DETR_model(input_shape, patch_size, num_patches, projection_dim, num_heads, transformer_units, transformer_layers)
+model.load_weights('../models/best_models/best_matlab_detr/cp.ckpt')
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
 # %%
@@ -94,7 +94,7 @@ y = model.predict(input_mod)
 y = model.predict(input_val)
 
 # %%
-index = 500
+index = 530
 plt.ion() 
 fig,ax = plt.subplots(1,3)
 ax[0].imshow(np.flipud(np.array(-y[index]).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))

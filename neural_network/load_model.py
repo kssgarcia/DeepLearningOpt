@@ -5,6 +5,8 @@ from matplotlib import colors
 import tensorflow as tf
 from simp_solver.SIMP import optimization
 
+print("Available GPUs:", tf.config.experimental.list_physical_devices('GPU'))
+
 x1 = np.loadtxt('../simp/results_matlab/x_dataL.txt')
 load_x1 = np.loadtxt('../simp/results_matlab/load_x_dataL.txt')
 load_y1 = np.loadtxt('../simp/results_matlab/load_y_dataL.txt')
@@ -51,7 +53,7 @@ def pixel_accuracy(y_true, y_pred):
     return pixel_accuracy
 
 #model = tf.keras.models.load_model('../models/unn_merge_3', custom_objects={'pixel_accuracy': pixel_accuracy})
-model = tf.keras.models.load_model('../models/pvt_matlab')
+model = tf.keras.models.load_model('./unn_matlab_test')
 model.summary()
 
 # %%
@@ -120,7 +122,7 @@ def custom_load(volfrac, l):
 y = model.predict(input_val)
 
 # %%
-index = 10
+index = 20
 plt.ion() 
 fig,ax = plt.subplots(1,3)
 ax[0].imshow(np.array(-y[index]).reshape(60, 60).T, cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))

@@ -146,7 +146,7 @@ def decoding_block(input_layer, filters, strides, trainable=False):
 
 def ViT_model(input_shape, patch_size, num_patches, projection_dim, num_heads, transformer_units, transformer_layers):
     inputs = layers.Input(shape=input_shape)
-    initial = layers.Conv2D(2, kernel_size=(2, 2), activation='relu', padding='valid')(inputs)
+    initial = layers.Conv2D(inputs.shape[-1], kernel_size=(2, 2), activation='relu', padding='valid')(inputs)
     # Create patches.
     patches = Patches(patch_size)(initial)
     # Encode patches.

@@ -20,7 +20,9 @@ models
 **/results_matlab
 **/plots
 **/best
+**/wandb
 neural_network/custom_layers.py
 neural_network/resnet_backbone.py
 neural_network/testUNN.py
 neural_network/testViT.py
+neural_network/DPT.ipynb
