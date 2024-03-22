@@ -21,8 +21,10 @@ models
 **/plots
 **/best
 **/wandb
+**/just_unn_matlab_test
 neural_network/custom_layers.py
 neural_network/resnet_backbone.py
 neural_network/testUNN.py
 neural_network/testViT.py
 neural_network/DPT.ipynb
+neural_network/image_classification_vit.ipynb

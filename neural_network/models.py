@@ -7,6 +7,7 @@ from tensorflow.keras.layers import Conv2D, MaxPooling2D, UpSampling2D, Dense, F
 from tensorflow.keras import layers
 from tensorflow.keras.applications import ResNet50
 import tensorflow as tf
+import numpy as np
 
 # %% CNN architecture
 def CNN_model(input_shape):
@@ -171,9 +172,10 @@ def ViT_model(input_shape, patch_size, num_patches, projection_dim, num_heads, t
 
     representation = layers.LayerNormalization(epsilon=1e-6)(encoded_patches)
 
-    resize1 = tf.reshape(representation, [-1, 6, 6, projection_dim])
+    reshape_dim = int(np.sqrt(representation.shape[1]))
+    resize1 = tf.reshape(representation, [-1, reshape_dim, reshape_dim, projection_dim])
 
-    decoded1 = decoding_block(resize1, 64, 5, True)
+    decoded1 = decoding_block(resize1, 64, 3, True)
     decoded2 = decoding_block(decoded1, 32, 2, True)
 
     output_tensor = layers.Conv2D(1, (1, 1), activation='sigmoid')(decoded2)
