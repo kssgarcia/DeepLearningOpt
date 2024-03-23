@@ -121,7 +121,7 @@ def custom_load(volfrac, l):
 y = model.predict(input_val)
 
 # %%
-index = 400
+index = 000
 plt.ion() 
 fig,ax = plt.subplots(1,3)
 ax[0].imshow(np.array(-y[index]).reshape(60, 60).T, cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
