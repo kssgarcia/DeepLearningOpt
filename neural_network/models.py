@@ -181,7 +181,6 @@ def ViT_model(input_shape, patch_size, num_patches, projection_dim, num_heads, t
     decoded1 = decoding_block(resize1, 64, 3, True)
     decoded2 = decoding_block(decoded1, 64, 1, True)
     decoded3 = decoding_block(decoded2, 32, 2, True)
-    print(decoded3.shape)
 
     x = layers.Conv2D(32, kernel_size=(3, 3), activation='relu', padding='same')(decoded3)
     x = layers.BatchNormalization()(x)

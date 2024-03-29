@@ -4,7 +4,9 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 import tensorflow as tf
 from simp_solver.SIMP import optimization
+import wandb
 
+wandb.init(project='my-tensor')
 print("Available GPUs:", tf.config.experimental.list_physical_devices('GPU'))
 
 x1 = np.loadtxt('../simp/results_matlab/x_dataL.txt')
@@ -44,6 +46,10 @@ input_val = input_data[-1000:]
 output_val = output_data[-1000:]
 
 batch_size = input_train.shape[0]
+# %%
+# Import the model weights to wandb
+artifact = wandb.use_artifact('model-weights:latest')
+artifact_dir = artifact.download()
 
 # %%
 def pixel_accuracy(y_true, y_pred):
@@ -53,7 +59,7 @@ def pixel_accuracy(y_true, y_pred):
     return pixel_accuracy
 
 #model = tf.keras.models.load_model('../models/unn_merge_3', custom_objects={'pixel_accuracy': pixel_accuracy})
-model = tf.keras.models.load_model('./just_unn_matlab_test')
+model = tf.keras.models.load_model('./test')
 model.summary()
 
 # %%
@@ -121,7 +127,7 @@ def custom_load(volfrac, l):
 y = model.predict(input_val)
 
 # %%
-index = 000
+index = 400
 plt.ion() 
 fig,ax = plt.subplots(1,3)
 ax[0].imshow(np.array(-y[index]).reshape(60, 60).T, cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
