@@ -8,26 +8,29 @@ import keras
 from keras import layers
 # %%
 
-# wandb.init(project='my-tensor')
-# print("Available GPUs:", tf.config.experimental.list_physical_devices('GPU'))
+x1 = np.loadtxt('../matlab_simp/x_dataL.txt')
+load_x1 = np.loadtxt('../matlab_simp/load_x_dataL.txt')
+load_y1 = np.loadtxt('../matlab_simp/load_y_dataL.txt')
+vol1 = np.loadtxt('../matlab_simp/vol_dataL.txt')
+bc1 = np.loadtxt('../matlab_simp/bc_dataL.txt')
 
-x1 = np.loadtxt('../simp/results_matlab/x_dataL.txt')
-load_x1 = np.loadtxt('../simp/results_matlab/load_x_dataL.txt')
-load_y1 = np.loadtxt('../simp/results_matlab/load_y_dataL.txt')
-vol1 = np.loadtxt('../simp/results_matlab/vol_dataL.txt')
-bc1 = np.loadtxt('../simp/results_matlab/bc_dataL.txt')
+x2 = np.loadtxt('../matlab_simp/x_dataL2.txt')
+load_x2 = np.loadtxt('../matlab_simp/load_x_dataL2.txt')
+load_y2 = np.loadtxt('../matlab_simp/load_y_dataL2.txt')
+vol2 = np.loadtxt('../matlab_simp/vol_dataL2.txt')
+bc2 = np.loadtxt('../matlab_simp/bc_dataL2.txt')
 
-x2 = np.loadtxt('../simp/results_matlab/x_dataL2.txt')
-load_x2 = np.loadtxt('../simp/results_matlab/load_x_dataL2.txt')
-load_y2 = np.loadtxt('../simp/results_matlab/load_y_dataL2.txt')
-vol2 = np.loadtxt('../simp/results_matlab/vol_dataL2.txt')
-bc2 = np.loadtxt('../simp/results_matlab/bc_dataL2.txt')
+x3 = np.loadtxt('../matlab_simp/x_dataL3.txt')
+load_x3 = np.loadtxt('../matlab_simp/load_x_dataL3.txt')
+load_y3 = np.loadtxt('../matlab_simp/load_y_dataL3.txt')
+vol3 = np.loadtxt('../matlab_simp/vol_dataL3.txt')
+bc3 = np.loadtxt('../matlab_simp/bc_dataL3.txt')
 
-x = np.concatenate((x1, x2), axis=1).T
-load_x = np.concatenate((load_x1, load_x2), axis=1).T
-load_y = np.concatenate((load_y1, load_y2), axis=1).T
-vol = np.concatenate((vol1, vol2), axis=1).T
-bc = np.concatenate((bc1, bc2), axis=1).T
+x = np.concatenate((x1, x2, x3), axis=1).T
+load_x = np.concatenate((load_x1, load_x2, load_x3), axis=1).T
+load_y = np.concatenate((load_y1, load_y2, load_y3), axis=1).T
+vol = np.concatenate((vol1, vol2, vol3), axis=1).T
+bc = np.concatenate((bc1, bc2, bc3), axis=1).T
 
 input_shape = (61, 61)  # Input size of 61x61
 num_channels = 4  # Number of channels in each input array
@@ -41,11 +44,13 @@ for i in range(batch_size):
     input_data[i, :, :, 3] = load_y[i].reshape((61,61))
 output_data = x.reshape((x.shape[0],60,60))
 
-input_train = input_data[-20000:]
-output_train = output_data[-20000:]
+input_train = input_data[:-1000]
+output_train = output_data[:-1000]
 
 input_val = input_data[-1000:]
 output_val = output_data[-1000:]
+
+batch_size = input_train.shape[0]
 
 input_shape = (61, 61, num_channels)
 
@@ -203,7 +208,7 @@ class HybridModel(keras.Model):
         self.transformer_units = transformer_units
         self.transformer_layers = transformer_layers
         self.initial = keras.Sequential([
-            layers.Conv2D(32, kernel_size=(2, 2), activation='relu', padding='valid'),
+            layers.Conv2D(32, kernel_size=(2, 2), activation='relu', padding='same'),
             layers.BatchNormalization(),
             layers.Conv2D(32, kernel_size=(3, 3), activation='relu', padding='same'),
             layers.BatchNormalization()
@@ -245,7 +250,7 @@ class HybridModel(keras.Model):
         x = self.decoded1(x)
         x = self.decoded2(x, encoded2)
         x = self.decoded3(x, encoded1)
-        x = self.decoded4(x, initial)
+        #x = self.decoded4(x, initial)
 
         x = self.last(x)
 
@@ -261,30 +266,44 @@ class HybridModel(keras.Model):
     def summary(self, input_shape=(61, 61, 4)):
         return self.build_graph(input_shape).summary()
 
+test_n = 14
+
 patch_size = 3  
-projection_dim = 64
-num_heads = 4
+projection_dim = 128
+num_heads = 8
 transformer_units = [
     projection_dim * 2,
     projection_dim,
 ]  # Size of the transformer layers
-transformer_layers = 8
+transformer_layers = 4
 input_shape = (61,61,4)
+
+checkpoint_callback = keras.callbacks.ModelCheckpoint(
+    f"./test_hybrid_{test_n}/cp.ckpt",
+    monitor="loss",
+    mode="min",
+    save_best_only=True,
+    save_weights_only=True,
+    verbose= 1,
+)
 
 model = HybridModel(patch_size, projection_dim, num_heads, transformer_units, transformer_layers)
 model.summary()
-
 # %%
+
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy', tf.keras.metrics.MeanAbsoluteError()])
-history = model.fit(input_val, output_val, epochs=100, batch_size=10, validation_split=0.2)
-model.save('./test_hybrid')
+history = model.fit(input_val, output_val, epochs=100, batch_size=10, validation_split=0.2, callbacks=[checkpoint_callback])
 
-# %%
 y = model.predict(input_val)
+
+#model.load_weights(f"./test_hybrid_{test_n}/cp.ckpt")
+#model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+
+#y1 = model.predict(input_val)
 
 index = 400
 plt.ion() 
-fig,ax = plt.subplots(1,3)
+fig,ax = plt.subplots(1,2)
 ax[0].imshow(np.array(-y[index]).reshape(60, 60).T, cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
 ax[0].set_title('Predicted')
 ax[0].set_xticks([])
@@ -295,11 +314,9 @@ ax[1].set_title('Expected')
 ax[1].set_xticks([])
 ax[1].set_yticks([])
 # Hacer una grafica con la convolucion
-ax[2].matshow(load_x[index].reshape(61, 61).T, cmap='gray')
-ax[2].set_title('Load point')
-ax[2].set_xticks([])
-ax[2].set_yticks([])
+plt.savefig(f"plots/hybrid_result_{test_n}.png")  # Save the plot as an image
 fig.show()
+
 
 plt.figure(figsize=(10, 6))
 plt.plot(history.history['loss'], label='Training Loss')
@@ -308,9 +325,9 @@ plt.title('Training and Validation Loss')
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
 plt.legend()
+plt.savefig(f"plots/loss_hybrid_{test_n}.png")  # Save the plot as an image
 plt.show()
 
-# Plotting training and validation accuracy
 plt.figure(figsize=(10, 6))
 plt.plot(history.history['accuracy'], label='Training Accuracy')
 plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
@@ -318,4 +335,5 @@ plt.title('Training and Validation Accuracy')
 plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
 plt.legend()
+plt.savefig(f"plots/accuracy_hybrid_{test_n}.png")  # Save the plot as an image
 plt.show()
