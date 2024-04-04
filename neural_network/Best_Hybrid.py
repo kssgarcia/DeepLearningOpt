@@ -289,51 +289,6 @@ checkpoint_callback = keras.callbacks.ModelCheckpoint(
 
 model = HybridModel(patch_size, projection_dim, num_heads, transformer_units, transformer_layers)
 model.summary()
-# %%
-
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy', tf.keras.metrics.MeanAbsoluteError()])
 history = model.fit(input_val, output_val, epochs=100, batch_size=10, validation_split=0.2, callbacks=[checkpoint_callback])
-
 y = model.predict(input_val)
-
-#model.load_weights(f"./test_hybrid_{test_n}/cp.ckpt")
-#model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-
-#y1 = model.predict(input_val)
-
-index = 400
-plt.ion() 
-fig,ax = plt.subplots(1,2)
-ax[0].imshow(np.array(-y[index]).reshape(60, 60).T, cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
-ax[0].set_title('Predicted')
-ax[0].set_xticks([])
-ax[0].set_yticks([])
-ax[1].matshow(-output_val[index].reshape(60, 60).T, cmap='gray')
-#ax[1].imshow(-np.flipud(optimization(60, 1, 1, 61, 1, 30, 1, 0.6).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
-ax[1].set_title('Expected')
-ax[1].set_xticks([])
-ax[1].set_yticks([])
-# Hacer una grafica con la convolucion
-plt.savefig(f"plots/hybrid_result_{test_n}.png")  # Save the plot as an image
-fig.show()
-
-
-plt.figure(figsize=(10, 6))
-plt.plot(history.history['loss'], label='Training Loss')
-plt.plot(history.history['val_loss'], label='Validation Loss')
-plt.title('Training and Validation Loss')
-plt.xlabel('Epoch')
-plt.ylabel('Loss')
-plt.legend()
-plt.savefig(f"plots/loss_hybrid_{test_n}.png")  # Save the plot as an image
-plt.show()
-
-plt.figure(figsize=(10, 6))
-plt.plot(history.history['accuracy'], label='Training Accuracy')
-plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
-plt.title('Training and Validation Accuracy')
-plt.xlabel('Epoch')
-plt.ylabel('Accuracy')
-plt.legend()
-plt.savefig(f"plots/accuracy_hybrid_{test_n}.png")  # Save the plot as an image
-plt.show()
