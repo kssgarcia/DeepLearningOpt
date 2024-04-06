@@ -59,7 +59,7 @@ class Patches(layers.Layer):
         patches = tf.image.extract_patches(
             images=images,
             sizes=[1, self.patch_size, self.patch_size, 1],
-            strides=[1, self.patch_size-1, self.patch_size-1, 1],
+            strides=[1, self.patch_size, self.patch_size, 1],
             rates=[1, 1, 1, 1],
             padding="VALID",
         )
@@ -103,7 +103,7 @@ class DecodingBlock(layers.Layer):
         self.filters = filters
         self.strides= strides
         self.trainable = trainable
-        self.conv2DTranspose = layers.Conv2DTranspose(self.filters, (self.strides, self.strides), strides=(self.strides-1, self.strides-1), activation='relu', padding='same', trainable=self.trainable)
+        self.conv2DTranspose = layers.Conv2DTranspose(self.filters, (self.strides, self.strides), strides=(self.strides, self.strides), activation='relu', padding='same', trainable=self.trainable)
         self.batchnorm1 = layers.BatchNormalization()
         self.conv2D = layers.Conv2D(self.filters, (3, 3), activation='relu', padding='same', trainable=self.trainable)
         self.batchnorm2 = layers.BatchNormalization()
@@ -210,9 +210,9 @@ class HybridModel(keras.Model):
         ])
         self.encoded1 = EncodingBlockSkip(64, 2)
         self.encoded2 = EncodingBlockSkip(128, 2)
-        self.encoded3 = EncodingBlockSkip(256, 1)
+        self.encoded3 = EncodingBlockSkip(256, 3)
         self.patches = Patches(self.patch_size)
-        self.patchencoder = PatchEncoder(49, self.projection_dim)
+        self.patchencoder = PatchEncoder(25, self.projection_dim)
         self.transformerblock = TransformerBlock(self.projection_dim, self.num_heads, self.transformer_units, self.transformer_layers)
         self.decoded1 = DecodingBlock(256, 3, True)
         self.decoded2 = DecodingBlockSkip(128, 2)
@@ -232,9 +232,7 @@ class HybridModel(keras.Model):
         encoded2 = self.encoded2(encoded1)
         encoded3 = self.encoded3(encoded2)
         
-        self.num_patches = (encoded3.shape[2] // self.patch_size) ** 2
-
-        x = self.patches(encoded3)
+        x = tf.reshape(encoded3, [-1, encoded3.shape[1]*encoded3.shape[1], encoded3.shape[-1]])
         x = self.patchencoder(x)
 
         x = self.transformerblock(x)
@@ -242,9 +240,7 @@ class HybridModel(keras.Model):
         reshape_dim = int(np.sqrt(x.shape[1]))
         x = tf.reshape(x, [-1, reshape_dim, reshape_dim, self.projection_dim])
 
-
         x = self.decoded1(x)
-        x = tf.image.resize(x, [15, 15], method=tf.image.ResizeMethod.BILINEAR)
         x = self.decoded2(x, encoded2)
         x = self.decoded3(x, encoded1)
 
