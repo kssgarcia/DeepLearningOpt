@@ -8,26 +8,29 @@ import keras
 from keras import layers
 # %%
 
-# wandb.init(project='my-tensor')
-# print("Available GPUs:", tf.config.experimental.list_physical_devices('GPU'))
+x1 = np.loadtxt('../matlab_simp/x_dataL.txt')
+load_x1 = np.loadtxt('../matlab_simp/load_x_dataL.txt')
+load_y1 = np.loadtxt('../matlab_simp/load_y_dataL.txt')
+vol1 = np.loadtxt('../matlab_simp/vol_dataL.txt')
+bc1 = np.loadtxt('../matlab_simp/bc_dataL.txt')
 
-x1 = np.loadtxt('../simp/results_matlab/x_dataL.txt')
-load_x1 = np.loadtxt('../simp/results_matlab/load_x_dataL.txt')
-load_y1 = np.loadtxt('../simp/results_matlab/load_y_dataL.txt')
-vol1 = np.loadtxt('../simp/results_matlab/vol_dataL.txt')
-bc1 = np.loadtxt('../simp/results_matlab/bc_dataL.txt')
+x2 = np.loadtxt('../matlab_simp/x_dataL2.txt')
+load_x2 = np.loadtxt('../matlab_simp/load_x_dataL2.txt')
+load_y2 = np.loadtxt('../matlab_simp/load_y_dataL2.txt')
+vol2 = np.loadtxt('../matlab_simp/vol_dataL2.txt')
+bc2 = np.loadtxt('../matlab_simp/bc_dataL2.txt')
 
-x2 = np.loadtxt('../simp/results_matlab/x_dataL2.txt')
-load_x2 = np.loadtxt('../simp/results_matlab/load_x_dataL2.txt')
-load_y2 = np.loadtxt('../simp/results_matlab/load_y_dataL2.txt')
-vol2 = np.loadtxt('../simp/results_matlab/vol_dataL2.txt')
-bc2 = np.loadtxt('../simp/results_matlab/bc_dataL2.txt')
+x3 = np.loadtxt('../matlab_simp/x_dataL3.txt')
+load_x3 = np.loadtxt('../matlab_simp/load_x_dataL3.txt')
+load_y3 = np.loadtxt('../matlab_simp/load_y_dataL3.txt')
+vol3 = np.loadtxt('../matlab_simp/vol_dataL3.txt')
+bc3 = np.loadtxt('../matlab_simp/bc_dataL3.txt')
 
-x = np.concatenate((x1, x2), axis=1).T
-load_x = np.concatenate((load_x1, load_x2), axis=1).T
-load_y = np.concatenate((load_y1, load_y2), axis=1).T
-vol = np.concatenate((vol1, vol2), axis=1).T
-bc = np.concatenate((bc1, bc2), axis=1).T
+x = np.concatenate((x1, x2, x3), axis=1).T
+load_x = np.concatenate((load_x1, load_x2, load_x3), axis=1).T
+load_y = np.concatenate((load_y1, load_y2, load_y3), axis=1).T
+vol = np.concatenate((vol1, vol2, vol3), axis=1).T
+bc = np.concatenate((bc1, bc2, bc3), axis=1).T
 
 input_shape = (61, 61)  # Input size of 61x61
 num_channels = 4  # Number of channels in each input array
@@ -41,11 +44,13 @@ for i in range(batch_size):
     input_data[i, :, :, 3] = load_y[i].reshape((61,61))
 output_data = x.reshape((x.shape[0],60,60))
 
-input_train = input_data[-20000:]
-output_train = output_data[-20000:]
+input_train = input_data[:-1000]
+output_train = output_data[:-1000]
 
 input_val = input_data[-1000:]
 output_val = output_data[-1000:]
+
+batch_size = input_train.shape[0]
 
 input_shape = (61, 61, num_channels)
 
@@ -214,7 +219,8 @@ class HybridModel(keras.Model):
         self.patches = Patches(self.patch_size)
         self.patchencoder = PatchEncoder(25, self.projection_dim)
         self.transformerblock = TransformerBlock(self.projection_dim, self.num_heads, self.transformer_units, self.transformer_layers)
-        self.decoded1 = DecodingBlock(256, 3, True)
+        #self.decoded1 = DecodingBlock(256, 3, True)
+        self.decoded1 = DecodingBlockSkip(256, 3)
         self.decoded2 = DecodingBlockSkip(128, 2)
         self.decoded3 = DecodingBlockSkip(64, 2)
         self.decoded4 = DecodingBlockSkip(32, 1)
@@ -222,6 +228,8 @@ class HybridModel(keras.Model):
             layers.Conv2D(32, kernel_size=(7, 7), activation='relu', padding='same'),
             layers.BatchNormalization(),
             layers.Conv2D(32, kernel_size=(7, 7), activation='relu', padding='same'),
+            layers.BatchNormalization(),
+            layers.Conv2D(16, kernel_size=(1, 1), activation='relu', padding='same'),
             layers.BatchNormalization()
         ])
         self.output_tensor = layers.Conv2D(1, (1, 1), activation='sigmoid')
@@ -232,7 +240,9 @@ class HybridModel(keras.Model):
         encoded2 = self.encoded2(encoded1)
         encoded3 = self.encoded3(encoded2)
         
-        x = tf.reshape(encoded3, [-1, encoded3.shape[1]*encoded3.shape[1], encoded3.shape[-1]])
+        self.num_patches = (encoded2.shape[2] // self.patch_size) ** 2
+
+        x = self.patches(encoded2)
         x = self.patchencoder(x)
 
         x = self.transformerblock(x)
@@ -240,9 +250,10 @@ class HybridModel(keras.Model):
         reshape_dim = int(np.sqrt(x.shape[1]))
         x = tf.reshape(x, [-1, reshape_dim, reshape_dim, self.projection_dim])
 
-        x = self.decoded1(x)
+        x = self.decoded1(x, encoded3)
         x = self.decoded2(x, encoded2)
         x = self.decoded3(x, encoded1)
+        #x = self.decoded4(x, initial)
 
         x = self.last(x)
 
@@ -258,6 +269,8 @@ class HybridModel(keras.Model):
     def summary(self, input_shape=(61, 61, 4)):
         return self.build_graph(input_shape).summary()
 
+test_n = 31
+
 patch_size = 3  
 projection_dim = 128
 num_heads = 8
@@ -268,20 +281,27 @@ transformer_units = [
 transformer_layers = 4
 input_shape = (61,61,4)
 
+checkpoint_callback = keras.callbacks.ModelCheckpoint(
+    f"./test_hybrid_{test_n}/cp.ckpt",
+    monitor="loss",
+    mode="min",
+    save_best_only=True,
+    save_weights_only=True,
+    verbose= 1,
+)
+
 model = HybridModel(patch_size, projection_dim, num_heads, transformer_units, transformer_layers)
 model.summary()
 
-# %%
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy', tf.keras.metrics.MeanAbsoluteError()])
-history = model.fit(input_val, output_val, epochs=100, batch_size=10, validation_split=0.2)
-model.save('./test_hybrid')
+history = model.fit(input_val, output_val, epochs=150, batch_size=10, validation_split=0.2, callbacks=[checkpoint_callback])
 
-# %%
+
 y = model.predict(input_val)
 
 index = 400
 plt.ion() 
-fig,ax = plt.subplots(1,3)
+fig,ax = plt.subplots(1,2)
 ax[0].imshow(np.array(-y[index]).reshape(60, 60).T, cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
 ax[0].set_title('Predicted')
 ax[0].set_xticks([])
@@ -292,12 +312,31 @@ ax[1].set_title('Expected')
 ax[1].set_xticks([])
 ax[1].set_yticks([])
 # Hacer una grafica con la convolucion
-ax[2].matshow(load_x[index].reshape(61, 61).T, cmap='gray')
-ax[2].set_title('Load point')
-ax[2].set_xticks([])
-ax[2].set_yticks([])
+plt.savefig(f"plots/hybrid_result_{test_n}.png")  # Save the plot as an image
 fig.show()
 
+model.load_weights(f"./test_hybrid_{test_n}/cp.ckpt")
+model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy', tf.keras.metrics.MeanAbsoluteError()])
+
+y = model.predict(input_val)
+index = 400
+plt.ion() 
+fig,ax = plt.subplots(1,2)
+ax[0].imshow(np.array(-y[index]).reshape(60, 60).T, cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
+ax[0].set_title('Predicted')
+ax[0].set_xticks([])
+ax[0].set_yticks([])
+ax[1].matshow(-output_val[index].reshape(60, 60).T, cmap='gray')
+#ax[1].imshow(-np.flipud(optimization(60, 1, 1, 61, 1, 30, 1, 0.6).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
+ax[1].set_title('Expected')
+ax[1].set_xticks([])
+ax[1].set_yticks([])
+# Hacer una grafica con la convolucion
+plt.savefig(f"plots/hybrid_result_{test_n}_best.png")  # Save the plot as an image
+fig.show()
+
+
+'''
 plt.figure(figsize=(10, 6))
 plt.plot(history.history['loss'], label='Training Loss')
 plt.plot(history.history['val_loss'], label='Validation Loss')
@@ -305,9 +344,9 @@ plt.title('Training and Validation Loss')
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
 plt.legend()
+plt.savefig(f"plots/loss_hybrid_{test_n}.png")  # Save the plot as an image
 plt.show()
 
-# Plotting training and validation accuracy
 plt.figure(figsize=(10, 6))
 plt.plot(history.history['accuracy'], label='Training Accuracy')
 plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
@@ -315,4 +354,6 @@ plt.title('Training and Validation Accuracy')
 plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
 plt.legend()
+plt.savefig(f"plots/accuracy_hybrid_{test_n}.png")  # Save the plot as an image
 plt.show()
+'''
