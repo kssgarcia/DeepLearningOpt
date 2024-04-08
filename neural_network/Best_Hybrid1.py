@@ -8,6 +8,8 @@ import keras
 from keras import layers
 # %%
 
+print(tf.config.list_physical_devices('GPU'))
+
 x1 = np.loadtxt('../matlab_simp/x_dataL.txt')
 load_x1 = np.loadtxt('../matlab_simp/load_x_dataL.txt')
 load_y1 = np.loadtxt('../matlab_simp/load_y_dataL.txt')
@@ -53,6 +55,7 @@ output_val = output_data[-1000:]
 batch_size = input_train.shape[0]
 
 input_shape = (61, 61, num_channels)
+
 
 # %%
 class Patches(layers.Layer):
@@ -224,10 +227,14 @@ class HybridModel(keras.Model):
         self.decoded3 = DecodingBlockSkip(64, 2)
         self.decoded4 = DecodingBlockSkip(32, 1)
         self.last = keras.Sequential([
-            layers.Conv2D(32, kernel_size=(7, 7), activation='relu', padding='same'),
+            layers.Conv2D(32, kernel_size=(5, 5), activation='relu', padding='same'),
             layers.BatchNormalization(),
-            layers.Conv2D(32, kernel_size=(7, 7), activation='relu', padding='same'),
-            layers.BatchNormalization()
+            layers.Conv2D(32, kernel_size=(5, 5), activation='relu', padding='same'),
+            layers.BatchNormalization(),
+            layers.Conv2D(16, kernel_size=(1, 1), activation='relu', padding='same'),
+            layers.BatchNormalization(),
+            layers.Conv2D(16, kernel_size=(1, 1), activation='relu', padding='same'),
+            layers.BatchNormalization(),
         ])
         self.output_tensor = layers.Conv2D(1, (1, 1), activation='sigmoid')
 
@@ -266,7 +273,7 @@ class HybridModel(keras.Model):
     def summary(self, input_shape=(61, 61, 4)):
         return self.build_graph(input_shape).summary()
 
-test_n = 29
+test_n = 5
 
 patch_size = 3  
 projection_dim = 128
@@ -289,7 +296,6 @@ checkpoint_callback = keras.callbacks.ModelCheckpoint(
 
 model = HybridModel(patch_size, projection_dim, num_heads, transformer_units, transformer_layers)
 model.summary()
-
 # %%
 
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy', tf.keras.metrics.MeanAbsoluteError()])

@@ -292,6 +292,7 @@ checkpoint_callback = keras.callbacks.ModelCheckpoint(
 
 model = HybridModel(patch_size, projection_dim, num_heads, transformer_units, transformer_layers)
 model.summary()
+# %%
 
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy', tf.keras.metrics.MeanAbsoluteError()])
 history = model.fit(input_val, output_val, epochs=150, batch_size=10, validation_split=0.2, callbacks=[checkpoint_callback])
