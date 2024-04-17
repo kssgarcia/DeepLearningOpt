@@ -21,8 +21,7 @@ models
 **/plots
 **/best
 **/wandb
-**/just_unn_matlab_test
-**/vit_matlab_test_200
+**/test_models
 neural_network/custom_layers.py
 neural_network/resnet_backbone.py
 neural_network/testUNN.py
