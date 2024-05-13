@@ -39,3 +39,9 @@
 - `unn_last_100` U-Net model with 100 epoch batch size small
 - `model_unet_merge` U-Net model with earlyStop 5 epochs and train with results_merge_3
 - `model_rand_#` U-Net model with 50 epochs the # correspond to the number of the rand dataset
+
+
+### Models
+
+- `Best_Hybrid_#` is the best hybrids models 
+- `Best_Hybrid_#_reg` is the best hybrids models applying regularization techniques, dropout and dynamic learning rate.
