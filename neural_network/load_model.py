@@ -55,7 +55,7 @@ def pixel_accuracy(y_true, y_pred):
     return pixel_accuracy
 
 #model = tf.keras.models.load_model('../models/unn_merge_3', custom_objects={'pixel_accuracy': pixel_accuracy})
-model = tf.keras.models.load_model('./vit_matlab_test_200')
+model = tf.keras.models.load_model('./plots/hybrid_16_l2')
 model.summary()
 
 # %%
@@ -123,7 +123,7 @@ def custom_load(volfrac, l):
 y = model.predict(input_val)
 
 # %%
-index = 400
+index = 100
 plt.ion() 
 fig,ax = plt.subplots(1,3)
 ax[0].imshow(np.array(-y[index]).reshape(60, 60).T, cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
