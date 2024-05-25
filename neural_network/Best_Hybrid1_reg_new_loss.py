@@ -7,6 +7,7 @@ from tensorflow import keras
 import pandas as pd
 import keras
 from keras import layers, regularizers
+# %%
 
 print(tf.config.list_physical_devices('GPU'))
 
