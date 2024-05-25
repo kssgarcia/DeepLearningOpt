@@ -299,7 +299,7 @@ lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
 adam_optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule)
 
 model.compile(optimizer=adam_optimizer, loss='binary_crossentropy', metrics=['accuracy', tf.keras.metrics.MeanAbsoluteError()])
-history = model.fit(input_train, output_train, epochs=400, batch_size=16, validation_data=(input_val, output_val))
+history = model.fit(input_train, output_train, epochs=200, batch_size=16, validation_data=(input_val, output_val))
 
 model.save(f"./plots_loss/hybrid_{test_n}")
 

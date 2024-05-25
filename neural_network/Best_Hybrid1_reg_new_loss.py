@@ -296,14 +296,14 @@ def custom_loss(y_true, y_pred):
     y_pred = tf.cast(y_pred, tf.float32)
     # Binary cross-entropy loss
     bce = tf.keras.losses.binary_crossentropy(y_true, y_pred)
-    # SSIM loss
-    ssim_loss = 1 - tf.reduce_mean(tf.image.ssim(y_true, y_pred, max_val=1.0))
+    # # SSIM loss
+    # ssim_loss = 1 - tf.reduce_mean(tf.image.ssim(y_true, y_pred, max_val=1.0))
     # Edge-aware loss
     y_true_edges = tf.image.sobel_edges(y_true)
     y_pred_edges = tf.image.sobel_edges(y_pred)
     edge_loss = tf.reduce_mean(tf.abs(y_true_edges - y_pred_edges))
     # Combine losses
-    total_loss = bce + ssim_loss + edge_loss
+    total_loss = bce + edge_loss
     return total_loss
 
 class DiceLoss(tf.keras.losses.Loss):
@@ -314,12 +314,9 @@ class DiceLoss(tf.keras.losses.Loss):
         self.gama = gama
 
     def call(self, y_true, y_pred):
-        y_true, y_pred = tf.cast(
-            y_true, dtype=tf.float32), tf.cast(y_pred, tf.float32)
-        nominator = 2 * \
-            tf.reduce_sum(tf.multiply(y_pred, y_true)) + self.smooth
-        denominator = tf.reduce_sum(
-            y_pred ** self.gama) + tf.reduce_sum(y_true ** self.gama) + self.smooth
+        y_true, y_pred = tf.cast(y_true, dtype=tf.float32), tf.cast(y_pred, tf.float32)
+        nominator = 2 * tf.reduce_sum(tf.multiply(y_pred, y_true)) + self.smooth
+        denominator = tf.reduce_sum(y_pred ** self.gama) + tf.reduce_sum(y_true ** self.gama) + self.smooth
         result = 1 - tf.divide(nominator, denominator)
         return result
 
@@ -327,9 +324,8 @@ def combined_bce_dice_loss(y_true, y_pred):
     y_true = tf.cast(y_true, tf.float32)
     y_pred = tf.cast(y_pred, tf.float32)
     bce = tf.keras.losses.binary_crossentropy(y_true, y_pred)
-    dice = DiceLoss(y_true, y_pred)
-    return bce + dice
-
+    dice = DiceLoss()
+    return bce + dice(y_true, y_pred)
 
 # Define learning rate schedule
 decay_steps = (input_train.shape[0] // 32) * 10
@@ -340,8 +336,9 @@ lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
     staircase=True
 )
 adam_optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule)
+loss = DiceLoss()
 
-model.compile(optimizer=adam_optimizer, loss=DiceLoss, metrics=['accuracy', tf.keras.metrics.MeanAbsoluteError()])
+model.compile(optimizer=adam_optimizer, loss=loss, metrics=['accuracy', tf.keras.metrics.MeanAbsoluteError()])
 history = model.fit(input_train, output_train, epochs=200, batch_size=16, validation_data=(input_val, output_val))
 model.save(f"./plots_loss/hybrid_{test_n}_NEW")
 
@@ -370,7 +367,7 @@ plt.savefig(f"plots_loss/accuracy_hybrid_{test_n}_NEW.png")  # Save the plot as 
 
 y = model.predict(input_val)
 
-index = 20
+index = 50
 plt.ion() 
 fig,ax = plt.subplots(1,2)
 ax[0].imshow(np.array(-y[index]).reshape(60, 60).T, cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
