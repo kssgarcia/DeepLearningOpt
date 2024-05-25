@@ -19,6 +19,7 @@ models
 **/results_rand_7
 **/results_matlab
 **/plots
+**/plots_loss
 **/best
 **/wandb
 **/test_models

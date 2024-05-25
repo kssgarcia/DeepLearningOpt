@@ -289,22 +289,19 @@ model = HybridModel(patch_size, projection_dim, num_heads, transformer_units, tr
 model.summary()
 
 # Define learning rate schedule
-decay_steps = (input_train.shape[0] // 32) * 5
-print(decay_steps)
-
+decay_steps = (input_train.shape[0] // 32) * 10
 lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
     initial_learning_rate=1e-4,
     decay_steps=decay_steps,
     decay_rate=0.96,
     staircase=True
 )
-
-# Define optimizer
 adam_optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule)
-model.compile(optimizer=adam_optimizer, loss='binary_crossentropy', metrics=['accuracy', tf.keras.metrics.MeanAbsoluteError()])
-history = model.fit(input_train, output_train, epochs=200, batch_size=32, validation_data=(input_val, output_val))
 
-model.save(f"./hybrid_{test_n}")
+model.compile(optimizer=adam_optimizer, loss='binary_crossentropy', metrics=['accuracy', tf.keras.metrics.MeanAbsoluteError()])
+history = model.fit(input_train, output_train, epochs=400, batch_size=16, validation_data=(input_val, output_val))
+
+model.save(f"./plots_loss/hybrid_{test_n}")
 
 # %%
 

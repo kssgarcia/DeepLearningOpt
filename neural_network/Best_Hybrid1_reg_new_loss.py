@@ -294,52 +294,56 @@ model.summary()
 def custom_loss(y_true, y_pred):
     y_true = tf.cast(y_true, tf.float32)
     y_pred = tf.cast(y_pred, tf.float32)
-    
     # Binary cross-entropy loss
     bce = tf.keras.losses.binary_crossentropy(y_true, y_pred)
-    
     # SSIM loss
     ssim_loss = 1 - tf.reduce_mean(tf.image.ssim(y_true, y_pred, max_val=1.0))
-    
     # Edge-aware loss
-    # y_true_edges = tf.image.sobel_edges(y_true)
-    # y_pred_edges = tf.image.sobel_edges(y_pred)
-    # edge_loss = tf.reduce_mean(tf.abs(y_true_edges - y_pred_edges))
-    
+    y_true_edges = tf.image.sobel_edges(y_true)
+    y_pred_edges = tf.image.sobel_edges(y_pred)
+    edge_loss = tf.reduce_mean(tf.abs(y_true_edges - y_pred_edges))
     # Combine losses
-    total_loss = bce + ssim_loss
+    total_loss = bce + ssim_loss + edge_loss
     return total_loss
 
-def dice_loss(y_true, y_pred, smooth=1):
-    intersection = tf.reduce_sum(y_true * y_pred, axis=[1, 2, 3])
-    union = tf.reduce_sum(y_true + y_pred, axis=[1, 2, 3])
-    dice = (2. * intersection + smooth) / (union + smooth)
-    return 1 - dice
+class DiceLoss(tf.keras.losses.Loss):
+    def __init__(self, smooth=1e-6, gama=2):
+        super(DiceLoss, self).__init__()
+        self.name = 'NDL'
+        self.smooth = smooth
+        self.gama = gama
+
+    def call(self, y_true, y_pred):
+        y_true, y_pred = tf.cast(
+            y_true, dtype=tf.float32), tf.cast(y_pred, tf.float32)
+        nominator = 2 * \
+            tf.reduce_sum(tf.multiply(y_pred, y_true)) + self.smooth
+        denominator = tf.reduce_sum(
+            y_pred ** self.gama) + tf.reduce_sum(y_true ** self.gama) + self.smooth
+        result = 1 - tf.divide(nominator, denominator)
+        return result
 
 def combined_bce_dice_loss(y_true, y_pred):
+    y_true = tf.cast(y_true, tf.float32)
+    y_pred = tf.cast(y_pred, tf.float32)
     bce = tf.keras.losses.binary_crossentropy(y_true, y_pred)
-    dice = dice_loss(y_true, y_pred)
+    dice = DiceLoss(y_true, y_pred)
     return bce + dice
 
 
 # Define learning rate schedule
 decay_steps = (input_train.shape[0] // 32) * 10
-print(decay_steps)
-
-# Reduce the learning rate
 lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
     initial_learning_rate=1e-4,  # Reduce initial learning rate
     decay_steps=decay_steps,
     decay_rate=0.96,
     staircase=True
 )
-
-# Define optimizer
 adam_optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule)
-model.compile(optimizer=adam_optimizer, loss=combined_bce_dice_loss, metrics=['accuracy', tf.keras.metrics.MeanAbsoluteError()])
-history = model.fit(input_train, output_train, epochs=200, batch_size=16, validation_data=(input_val, output_val))
 
-model.save(f"./hybrid_{test_n}_NEW")
+model.compile(optimizer=adam_optimizer, loss=DiceLoss, metrics=['accuracy', tf.keras.metrics.MeanAbsoluteError()])
+history = model.fit(input_train, output_train, epochs=200, batch_size=16, validation_data=(input_val, output_val))
+model.save(f"./plots_loss/hybrid_{test_n}_NEW")
 
 # %%
 
@@ -366,7 +370,7 @@ plt.savefig(f"plots_loss/accuracy_hybrid_{test_n}_NEW.png")  # Save the plot as 
 
 y = model.predict(input_val)
 
-index = 70
+index = 20
 plt.ion() 
 fig,ax = plt.subplots(1,2)
 ax[0].imshow(np.array(-y[index]).reshape(60, 60).T, cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
