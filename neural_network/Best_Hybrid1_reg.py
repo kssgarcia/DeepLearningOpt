@@ -10,29 +10,17 @@ from keras import layers, regularizers
 
 print(tf.config.list_physical_devices('GPU'))
 
-x1 = np.loadtxt('../matlab_simp/x_dataL.txt')
-load_x1 = np.loadtxt('../matlab_simp/load_x_dataL.txt')
-load_y1 = np.loadtxt('../matlab_simp/load_y_dataL.txt')
-vol1 = np.loadtxt('../matlab_simp/vol_dataL.txt')
-bc1 = np.loadtxt('../matlab_simp/bc_dataL.txt')
+x1 = np.loadtxt('../simp/results_matlab/x_dataL.txt')
+load_x1 = np.loadtxt('../simp/results_matlab/load_x_dataL.txt')
+load_y1 = np.loadtxt('../simp/results_matlab/load_y_dataL.txt')
+vol1 = np.loadtxt('../simp/results_matlab/vol_dataL.txt')
+bc1 = np.loadtxt('../simp/results_matlab/bc_dataL.txt')
 
-x2 = np.loadtxt('../matlab_simp/x_dataL2.txt')
-load_x2 = np.loadtxt('../matlab_simp/load_x_dataL2.txt')
-load_y2 = np.loadtxt('../matlab_simp/load_y_dataL2.txt')
-vol2 = np.loadtxt('../matlab_simp/vol_dataL2.txt')
-bc2 = np.loadtxt('../matlab_simp/bc_dataL2.txt')
-
-x3 = np.loadtxt('../matlab_simp/x_dataL3.txt')
-load_x3 = np.loadtxt('../matlab_simp/load_x_dataL3.txt')
-load_y3 = np.loadtxt('../matlab_simp/load_y_dataL3.txt')
-vol3 = np.loadtxt('../matlab_simp/vol_dataL3.txt')
-bc3 = np.loadtxt('../matlab_simp/bc_dataL3.txt')
-
-x = np.concatenate((x1, x2, x3), axis=1).T
-load_x = np.concatenate((load_x1, load_x2, load_x3), axis=1).T
-load_y = np.concatenate((load_y1, load_y2, load_y3), axis=1).T
-vol = np.concatenate((vol1, vol2, vol3), axis=1).T
-bc = np.concatenate((bc1, bc2, bc3), axis=1).T
+x = x1.T
+load_x = load_x1.T
+load_y = load_y1.T
+vol = vol1.T
+bc = bc1.T
 
 input_shape = (61, 61)  # Input size of 61x61
 num_channels = 4  # Number of channels in each input array
@@ -46,11 +34,11 @@ for i in range(batch_size):
     input_data[i, :, :, 3] = load_y[i].reshape((61,61))
 output_data = x.reshape((x.shape[0],60,60))
 
-input_train = input_data[:-1000]
-output_train = output_data[:-1000]
+input_train = input_data[-1000:]
+output_train = output_data[-1000:]
 
-input_val = input_data[-1000:]
-output_val = output_data[-1000:]
+input_val = input_data[-100:]
+output_val = output_data[-100:]
 
 batch_size = input_train.shape[0]
 
@@ -64,7 +52,6 @@ if np.any((output_val > 0) & (output_val < 1)):
     print("output_val has elements between 0 and 1")
 else:
     print("output_val does not have elements between 0 and 1")
-
 
 # %%
 class Patches(layers.Layer):
@@ -298,79 +285,28 @@ transformer_units = [
 transformer_layers = 4
 input_shape = (61,61,4)
 
-checkpoint_callback = keras.callbacks.ModelCheckpoint(
-    f"./best_hybrid_{test_n}/cp.ckpt",
-    monitor="loss",
-    mode="min",
-    save_best_only=True,
-    save_weights_only=True,
-    verbose= 1,
-)
-
 model = HybridModel(patch_size, projection_dim, num_heads, transformer_units, transformer_layers)
-
-model.load_weights('./best_hybrid_16/cp.ckpt') # New Line
-
 model.summary()
 
-
-#adam_optimizer = keras.optimizers.Adam(learning_rate=1e-4)
-
-decay_steps = (input_train.shape[0] // 32)*5
+# Define learning rate schedule
+decay_steps = (input_train.shape[0] // 32) * 5
 print(decay_steps)
 
 lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
-        initial_learning_rate=1e-4,
-        decay_steps=decay_steps,
-        decay_rate=0.96,  
-        staircase=True  
-        )
+    initial_learning_rate=1e-4,
+    decay_steps=decay_steps,
+    decay_rate=0.96,
+    staircase=True
+)
+
+# Define optimizer
 adam_optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule)
-
 model.compile(optimizer=adam_optimizer, loss='binary_crossentropy', metrics=['accuracy', tf.keras.metrics.MeanAbsoluteError()])
-history = model.fit(input_train, output_train, epochs=1000, batch_size=32, validation_data=[input_val, output_val], callbacks=[checkpoint_callback])
-#history = model.fit(input_val, output_val, epochs=100, batch_size=10, validation_split=0.2, callbacks=[checkpoint_callback])
+history = model.fit(input_train, output_train, epochs=200, batch_size=32, validation_data=(input_val, output_val))
 
-model.save(f"../models/hybrid_{test_n}_l2")
+model.save(f"./hybrid_{test_n}")
 
-y = model.predict(input_val)
-
-index = 40
-plt.ion() 
-fig,ax = plt.subplots(1,2)
-ax[0].imshow(np.array(-y[index]).reshape(60, 60).T, cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
-ax[0].set_title('Predicted')
-ax[0].set_xticks([])
-ax[0].set_yticks([])
-ax[1].matshow(-output_val[index].reshape(60, 60).T, cmap='gray')
-#ax[1].imshow(-np.flipud(optimization(60, 1, 1, 61, 1, 30, 1, 0.6).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
-ax[1].set_title('Expected')
-ax[1].set_xticks([])
-ax[1].set_yticks([])
-# Hacer una grafica con la convolucion
-plt.savefig(f"plots/hybrid_result_{test_n}.png")  # Save the plot as an image
-fig.show()
-
-model.load_weights(f"./best_hybrid_{test_n}/cp.ckpt")
-model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy', tf.keras.metrics.MeanAbsoluteError()])
-
-y = model.predict(input_val)
-
-index = 40
-plt.ion() 
-fig,ax = plt.subplots(1,2)
-ax[0].imshow(np.array(-y[index]).reshape(60, 60).T, cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
-ax[0].set_title('Predicted')
-ax[0].set_xticks([])
-ax[0].set_yticks([])
-ax[1].matshow(-output_val[index].reshape(60, 60).T, cmap='gray')
-#ax[1].imshow(-np.flipud(optimization(60, 1, 1, 61, 1, 30, 1, 0.6).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
-ax[1].set_title('Expected')
-ax[1].set_xticks([])
-ax[1].set_yticks([])
-# Hacer una grafica con la convolucion
-plt.savefig(f"plots/hybrid_result_{test_n}_best.png")  # Save the plot as an image
-fig.show()
+# %%
 
 plt.figure(figsize=(10, 6))
 plt.plot(history.history['loss'], label='Training Loss')
@@ -389,7 +325,24 @@ plt.title('Training and Validation Accuracy')
 plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
 plt.legend()
-plt.savefig(f"plots/accuracy_hybrid_{test_n}.png")  # Save the plot as an image
+plt.savefig(f"plots_loss/accuracy_hybrid_{test_n}.png")  # Save the plot as an image
+
+# %%
+
+y = model.predict(input_val)
+
+index = 50
+plt.ion() 
+fig,ax = plt.subplots(1,2)
+ax[0].imshow(np.array(-y[index]).reshape(60, 60).T, cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
+ax[0].set_title('Predicted')
+ax[0].set_xticks([])
+ax[0].set_yticks([])
+ax[1].matshow(-output_val[index].reshape(60, 60).T, cmap='gray')
+ax[1].set_title('Expected')
+ax[1].set_xticks([])
+ax[1].set_yticks([])
+fig.show()
 
 # Save training and validation loss to a CSV file
 loss_data = {
@@ -399,4 +352,4 @@ loss_data = {
     'Validation Accuracy': history.history['val_accuracy']
 }
 loss_df = pd.DataFrame(loss_data)
-loss_df.to_csv(f"./loss_data_{test_n}.csv", index=False)
+loss_df.to_csv(f"./plots_loss/loss_data_{test_n}.csv", index=False)
