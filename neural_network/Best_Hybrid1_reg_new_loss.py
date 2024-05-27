@@ -307,16 +307,16 @@ def custom_loss(y_true, y_pred):
     return total_loss
 
 class DiceLoss(tf.keras.losses.Loss):
-    def __init__(self, smooth=1e-6, gama=2):
+    def __init__(self, smooth=1e-6, gamma=2):
         super(DiceLoss, self).__init__()
         self.name = 'NDL'
         self.smooth = smooth
-        self.gama = gama
+        self.gamma = gamma
 
     def call(self, y_true, y_pred):
         y_true, y_pred = tf.cast(y_true, dtype=tf.float32), tf.cast(y_pred, tf.float32)
         nominator = 2 * tf.reduce_sum(tf.multiply(y_pred, y_true)) + self.smooth
-        denominator = tf.reduce_sum(y_pred ** self.gama) + tf.reduce_sum(y_true ** self.gama) + self.smooth
+        denominator = tf.reduce_sum(y_pred ** self.gamma) + tf.reduce_sum(y_true ** self.gamma) + self.smooth
         result = 1 - tf.divide(nominator, denominator)
         return result
 

@@ -281,7 +281,7 @@ input_shape = (61,61,4)
 
 model = HybridModel(patch_size, projection_dim, num_heads, transformer_units, transformer_layers)
 model.summary()
-model.load_weights('./plots/best_hybrid_16/cp.ckpt')
+model.load_weights('./plots/17/best_hybrid_17/cp.ckpt')
 decay_steps = (input_train.shape[0] // 32)*5
 lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
         initial_learning_rate=1e-4,
@@ -295,7 +295,7 @@ model.compile(optimizer=adam_optimizer, loss='binary_crossentropy', metrics=['ac
 
 # %%
 
-from models import CNN_model, UNN_model, ViT_model, PVT_model, DETR_model
+from modelsCluster import CNN_model, UNN_model, ViT_model, PVT_model, DETR_model
 input_shape = (61, 61, num_channels)
 
 learning_rate = 0.001
@@ -311,8 +311,8 @@ transformer_units = [
 ]  # Size of the transformer layers
 transformer_layers = 20
 
-model = DETR_model(input_shape, patch_size, num_patches, projection_dim, num_heads, transformer_units, transformer_layers)
-model.load_weights('../models/best_models/best_matlab_detr/cp.ckpt')
+model = UNN_model((61,61,num_channels))
+model.load_weights('./plots/17/best_unn_17/cp.ckpt')
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
 # %%
@@ -343,7 +343,7 @@ y = model.predict(input_mod)
 y = model.predict(input_val)
 
 # %%
-index = 90
+index = 80
 plt.ion() 
 fig,ax = plt.subplots(1,3)
 ax[0].imshow(np.flipud(np.array(-y[index]).reshape(60, 60)), cmap='gray', interpolation='none',norm=colors.Normalize(vmin=-1,vmax=0))
