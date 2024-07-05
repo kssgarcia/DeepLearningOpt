@@ -91,13 +91,10 @@ class PatchEncoder(nn.Module):
     def __init__(self, num_patches, projection_dim):
         super(PatchEncoder, self).__init__()
         self.num_patches = num_patches
-        # Assuming each patch has been flattened to 1152 dimensions as per your input
         self.projection = nn.Linear(1152, projection_dim)
         self.position_embedding = nn.Parameter(torch.zeros(1, num_patches, projection_dim))
 
     def forward(self, patches):
-        # patches should have shape [batch_size, num_patches, patch_size * patch_size * num_channels]
-        # which is [16, 25, 1152] as per your input shape
         encoded = self.projection(patches) + self.position_embedding
         return encoded
 
