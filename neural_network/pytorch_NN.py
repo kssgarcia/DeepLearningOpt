@@ -155,7 +155,6 @@ class DecodingBlockSkip(nn.Module):
         self.dropout = nn.Dropout(0.1)
 
     def forward(self, x, concat_layer):
-        print(x.shape, concat_layer.shape)
         x = torch.cat([x, concat_layer], dim=1)
         x = self.conv2DTranspose(x)
         x = torch.relu(x)
@@ -204,35 +203,22 @@ class HybridModel(nn.Module):
         
     def forward(self, x):
         initial = self.initial(x)
-        print(initial.shape)
         encoded1 = self.encoded1(initial)
-        print(encoded1.shape)
         encoded2 = self.encoded2(encoded1)
-        print(encoded2.shape)
         encoded3 = self.encoded3(encoded2)
-        print(encoded3.shape)
         
         x = self.patches(encoded2)
-        print(x.shape)
         x = self.patchencoder(x)
-        print(x.shape)
         x = self.transformerblock(x)
-        print(x.shape)
         
         num_patches = int(np.sqrt(x.shape[1]))
         x = x.view(x.size(0), x.size(2), num_patches, num_patches)
         
-        print(x.shape)
         x = self.decoded1(x, encoded3)
-        print(x.shape)
         x = self.decoded2(x, encoded2)
-        print(x.shape)
         x = self.decoded3(x, encoded1)
-        print(x.shape)
         x = self.last(x)
-        print(x.shape)
         x = self.output_tensor(x)
-        print(x.shape)
         
         return x
 
@@ -252,11 +238,11 @@ transformer_layers = 4
 model = HybridModel(patch_size, projection_dim, num_heads, transformer_units, transformer_layers).to(device)
 
 # Optimizer and loss function
-criterion = nn.BCELoss()
+criterion = nn.BCEWithLogitsLoss()
 optimizer = optim.Adam(model.parameters(), lr=1e-4)
 
 # Training loop
-epochs = 200
+epochs = 5
 train_losses = []
 val_losses = []
 train_accuracies = []
@@ -338,7 +324,7 @@ with torch.no_grad():
         y = outputs.cpu().numpy()
         break
 
-index = 50
+index = 0
 fig, ax = plt.subplots(1, 2)
 ax[0].imshow(-y[index].reshape(60, 60).T, cmap='gray', interpolation='none', norm=colors.Normalize(vmin=-1, vmax=0))
 ax[0].set_title('Predicted')
@@ -349,13 +335,3 @@ ax[1].set_title('Expected')
 ax[1].set_xticks([])
 ax[1].set_yticks([])
 plt.show()
-
-# Save training and validation loss to a CSV file
-loss_data = {
-    'Training Loss': train_losses,
-    'Validation Loss': val_losses,
-    'Training Accuracy': train_accuracies,
-    'Validation Accuracy': val_accuracies
-}
-loss_df = pd.DataFrame(loss_data)
-loss_df.to_csv(f"./plots_loss/loss_data_{test_n}.csv", index=False)
