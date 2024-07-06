@@ -6,6 +6,10 @@ from torch.utils.data import DataLoader, Dataset
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import colors
+import logging
+
+# Setup logging
+logging.basicConfig(filename='./plots_loss/training.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Check for GPU
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -288,8 +292,9 @@ for epoch in range(epochs):
             
     val_losses.append(val_loss / total_val)
     val_accuracies.append(val_correct / total_val)
-    
-    print(f'Epoch {epoch+1}/{epochs}, Train Loss: {train_loss/total_train:.4f}, Val Loss: {val_loss/total_val:.4f}, Train Acc: {train_correct/total_train:.4f}, Val Acc: {val_correct/total_val:.4f}')
+
+    logging.info(f'Epoch {epoch+1}/{epochs} | Train Loss: {train_loss/total_train:.4f} | Val Loss: {val_loss/total_val:.4f} | Train Acc: {train_correct/total_train:.4f} | Val Acc: {val_correct/total_val:.4f}')   
+    print(f'Epoch {epoch+1}/{epochs} | Train Loss: {train_loss/total_train:.4f} | Val Loss: {val_loss/total_val:.4f} | Train Acc: {train_correct/total_train:.4f} | Val Acc: {val_correct/total_val:.4f}')
 
 # Save the model
 torch.save(model.state_dict(), f"./plots_loss/hybrid_{test_n}.pt")
