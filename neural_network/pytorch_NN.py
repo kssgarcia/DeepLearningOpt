@@ -7,6 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import colors
 import logging
+import time
 
 # Setup logging
 logging.basicConfig(filename='./plots_loss/training.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -246,13 +247,14 @@ criterion = nn.BCEWithLogitsLoss()
 optimizer = optim.Adam(model.parameters(), lr=1e-4)
 
 # Training loop
-epochs = 5
+epochs = 10
 train_losses = []
 val_losses = []
 train_accuracies = []
 val_accuracies = []
 
 for epoch in range(epochs):
+    t0 = time.time()
     model.train()
     train_loss = 0.0
     train_correct = 0
@@ -293,8 +295,10 @@ for epoch in range(epochs):
     val_losses.append(val_loss / total_val)
     val_accuracies.append(val_correct / total_val)
 
-    logging.info(f'Epoch {epoch+1}/{epochs} | Train Loss: {train_loss/total_train:.4f} | Val Loss: {val_loss/total_val:.4f} | Train Acc: {train_correct/total_train:.4f} | Val Acc: {val_correct/total_val:.4f}')   
-    print(f'Epoch {epoch+1}/{epochs} | Train Loss: {train_loss/total_train:.4f} | Val Loss: {val_loss/total_val:.4f} | Train Acc: {train_correct/total_train:.4f} | Val Acc: {val_correct/total_val:.4f}')
+    t1 = time.time()
+    dt = (t1 - t0) * 1000
+    logging.info(f'Epoch {epoch+1}/{epochs} | Train Loss: {train_loss/total_train:.4f} | Val Loss: {val_loss/total_val:.4f} | Train Acc: {train_correct/total_train:.4f} | Val Acc: {val_correct/total_val:.4f} | Time: {dt:.2f}ms')   
+    print(f'Epoch {epoch+1}/{epochs} | Train Loss: {train_loss/total_train:.4f} | Val Loss: {val_loss/total_val:.4f} | Train Acc: {train_correct/total_train:.4f} | Val Acc: {val_correct/total_val:.4f} | Time: {dt:.2f}ms')
 
 # Save the model
 torch.save(model.state_dict(), f"./plots_loss/hybrid_{test_n}.pt")
