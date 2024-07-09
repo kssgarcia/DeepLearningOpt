@@ -239,15 +239,17 @@ transformer_units = [
 ]
 transformer_layers = 4
 
-# Initialize model
+torch.set_float32_matmul_precision('high')
+
 model = HybridModel(patch_size, projection_dim, num_heads, transformer_units, transformer_layers).to(device)
+# model = torch.compile(model)
 
 # Optimizer and loss function
 criterion = nn.BCEWithLogitsLoss()
 optimizer = optim.Adam(model.parameters(), lr=1e-4)
 
 # Training loop
-epochs = 10
+epochs = 100
 train_losses = []
 val_losses = []
 train_accuracies = []
@@ -311,7 +313,7 @@ plt.title('Training and Validation Loss')
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
 plt.legend()
-plt.savefig(f"plots/loss_hybrid_{test_n}.png")  # Save the plot as an image
+plt.savefig(f"plots_loss/loss_hybrid_{test_n}.png")  # Save the plot as an image
 plt.show()
 
 # Plotting training and validation accuracy
@@ -344,3 +346,4 @@ ax[1].set_title('Expected')
 ax[1].set_xticks([])
 ax[1].set_yticks([])
 plt.show()
+plt.savefig(f"plots_loss/hybrid_{test_n}.png")  # Save the plot as an image
