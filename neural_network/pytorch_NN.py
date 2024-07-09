@@ -41,8 +41,10 @@ for i in range(batch_size):
     input_data[i, :, :, 3] = load_y[i].reshape((61,61))
 output_data = x.reshape((x.shape[0], 60, 60))
 
-input_train = input_data[-1000:]
-output_train = output_data[-1000:]
+input_train = input_data[:-100]
+output_train = output_data[:-100]
+
+print(input_train.shape)
 
 input_val = input_data[-100:]
 output_val = output_data[-100:]
@@ -298,7 +300,7 @@ for epoch in range(epochs):
     val_accuracies.append(val_correct / total_val)
 
     t1 = time.time()
-    dt = (t1 - t0) * 1000
+    dt = (t1 - t0)
     logging.info(f'Epoch {epoch+1}/{epochs} | Train Loss: {train_loss/total_train:.4f} | Val Loss: {val_loss/total_val:.4f} | Train Acc: {train_correct/total_train:.4f} | Val Acc: {val_correct/total_val:.4f} | Time: {dt:.2f}ms')   
     print(f'Epoch {epoch+1}/{epochs} | Train Loss: {train_loss/total_train:.4f} | Val Loss: {val_loss/total_val:.4f} | Train Acc: {train_correct/total_train:.4f} | Val Acc: {val_correct/total_val:.4f} | Time: {dt:.2f}ms')
 
