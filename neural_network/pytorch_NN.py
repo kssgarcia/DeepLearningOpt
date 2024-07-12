@@ -251,7 +251,7 @@ criterion = nn.BCEWithLogitsLoss()
 optimizer = optim.Adam(model.parameters(), lr=1e-4)
 
 # Training loop
-epochs = 100
+epochs = 5
 train_losses = []
 val_losses = []
 train_accuracies = []
@@ -349,3 +349,25 @@ ax[1].set_xticks([])
 ax[1].set_yticks([])
 plt.show()
 plt.savefig(f"plots_loss/hybrid_{test_n}.png")  # Save the plot as an image
+
+# %% Plotting the gradients
+
+plt.figure(figsize=(20, 4))  # width and height of the plot
+legends = []
+
+# Iterate over each parameter and plot its gradient
+for name, param in model.named_parameters():
+    if name.split('.')[-1] == "weight":
+        if param.requires_grad and param.grad is not None:
+            t = param.grad.cpu().detach()
+            if len(t.shape) == 2:
+                print(f'{name}: mean {t.mean():+f}, std {t.std():e}')
+                hy, hx = torch.histogram(t, density=True)
+                plt.plot(hx[:-1].detach(), hy.detach())
+                legends.append(name)
+
+plt.legend(legends)
+plt.title('Gradient Distribution')
+plt.xlabel('Gradient value')
+plt.ylabel('Density')
+plt.show()
