@@ -41,10 +41,8 @@ for i in range(batch_size):
     input_data[i, :, :, 3] = load_y[i].reshape((61,61))
 output_data = x.reshape((x.shape[0], 60, 60))
 
-input_train = input_data[:-100]
-output_train = output_data[:-100]
-
-print(input_train.shape)
+input_train = input_data[-1000:]
+output_train = output_data[-1000:]
 
 input_val = input_data[-100:]
 output_val = output_data[-100:]
@@ -248,14 +246,16 @@ model = HybridModel(patch_size, projection_dim, num_heads, transformer_units, tr
 
 # Optimizer and loss function
 criterion = nn.BCEWithLogitsLoss()
-optimizer = optim.Adam(model.parameters(), lr=1e-4)
+lr=1e-4
+optimizer = optim.Adam(model.parameters(), lr=lr)
 
 # Training loop
-epochs = 5
+epochs = 50
 train_losses = []
 val_losses = []
 train_accuracies = []
 val_accuracies = []
+ud = []
 
 for epoch in range(epochs):
     t0 = time.time()
@@ -298,6 +298,9 @@ for epoch in range(epochs):
             
     val_losses.append(val_loss / total_val)
     val_accuracies.append(val_correct / total_val)
+
+    with torch.no_grad():
+        ud.append([((lr * p.grad).std() / p.data.std()).log10().item() for p in model.parameters() if p.grad is not None])
 
     t1 = time.time()
     dt = (t1 - t0)
@@ -350,6 +353,28 @@ ax[1].set_yticks([])
 plt.show()
 plt.savefig(f"plots_loss/hybrid_{test_n}.png")  # Save the plot as an image
 
+# %% Plotting the output paramets
+
+plt.figure(figsize=(20, 4))  # width and height of the plot
+legends = []
+
+# Iterate over each parameter and plot its gradient
+for name, param in model.named_parameters():
+    if name.split('.')[-1] == "weight":
+        if param.requires_grad and param.grad is not None:
+            t = param.cpu().detach()
+            if len(t.shape) == 2:
+                print(f'{name}: mean {t.mean():+f}, std {t.std():e}')
+                hy, hx = torch.histogram(t, density=True)
+                plt.plot(hx[:-1].detach(), hy.detach())
+                legends.append(name)
+
+plt.legend(legends)
+plt.title('Weights Distribution')
+plt.xlabel('Gradient value')
+plt.ylabel('Density')
+plt.show()
+
 # %% Plotting the gradients
 
 plt.figure(figsize=(20, 4))  # width and height of the plot
@@ -367,7 +392,20 @@ for name, param in model.named_parameters():
                 legends.append(name)
 
 plt.legend(legends)
-plt.title('Gradient Distribution')
+plt.title('Gradient Weights Distribution')
 plt.xlabel('Gradient value')
 plt.ylabel('Density')
 plt.show()
+
+# %% Plotting parameters update ratios
+
+plt.figure(figsize=(20, 4))  # width and height of the plot
+legends = []
+
+plt.figure(figsize=(20, 4))
+legends = []
+for i,p in enumerate(range(len(ud))):
+    plt.plot([ud[j][i] for j in range(len(ud)) if ud[j][i] is not None])
+    legends.append('param %d' % i)
+plt.plot([0, len(ud)], [-3, -3], 'k') # these ratios should be ~1e-3, indicate on plot
+plt.legend(legends);
