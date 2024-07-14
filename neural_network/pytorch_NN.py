@@ -241,7 +241,6 @@ transformer_layers = 4
 
 torch.set_float32_matmul_precision('high')
 
-# %%
 model = HybridModel(patch_size, projection_dim, num_heads, transformer_units, transformer_layers).to(device)
 # model = torch.compile(model)
 model.load_state_dict(torch.load("./plots/pytorch_1/hybrid_1.pt"))
@@ -334,6 +333,8 @@ plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
 plt.legend()
 plt.savefig(f"plots_loss/accuracy_hybrid_{test_n}.png")  # Save the plot as an image
+
+# %% Eval Model
 
 # Prediction and visualization
 model.eval()
