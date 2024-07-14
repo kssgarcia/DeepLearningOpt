@@ -246,11 +246,11 @@ model = HybridModel(patch_size, projection_dim, num_heads, transformer_units, tr
 
 # Optimizer and loss function
 criterion = nn.BCEWithLogitsLoss()
-lr=1e-4
+lr=1e-3
 optimizer = optim.Adam(model.parameters(), lr=lr)
 
 # Training loop
-epochs = 50
+epochs = 20
 train_losses = []
 val_losses = []
 train_accuracies = []
@@ -381,15 +381,16 @@ plt.figure(figsize=(20, 4))  # width and height of the plot
 legends = []
 
 # Iterate over each parameter and plot its gradient
-for name, param in model.named_parameters():
+for name, p in model.named_parameters():
+    print(name)
     if name.split('.')[-1] == "weight":
-        if param.requires_grad and param.grad is not None:
-            t = param.grad.cpu().detach()
-            if len(t.shape) == 2:
-                print(f'{name}: mean {t.mean():+f}, std {t.std():e}')
+        if p.requires_grad and p.grad is not None:
+            t = p.grad.cpu().detach()
+            if p.ndim == 2:
+                print('weight %10s | mean %+f | std %e | grad:data ratio %e' % (tuple(p.shape), t.mean(), t.std(), t.std() / p.std()))
                 hy, hx = torch.histogram(t, density=True)
                 plt.plot(hx[:-1].detach(), hy.detach())
-                legends.append(name)
+                legends.append(f'{i} {tuple(p.shape)}')
 
 plt.legend(legends)
 plt.title('Gradient Weights Distribution')
