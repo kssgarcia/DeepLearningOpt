@@ -4,7 +4,7 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Conv2D, BatchNormalization, MaxPooling2D, concatenate, Conv2DTranspose
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, UpSampling2D, Dense, Flatten
-from tensorflow.keras import layers
+from tensorflow.keras import layers, regularizers
 from tensorflow.keras.applications import ResNet50
 import tensorflow as tf
 import numpy as np
@@ -47,14 +47,14 @@ def UNN_model(input_shape):
     def encoding_block(input_layer, filters):
         x = Conv2D(filters, (3, 3), activation='relu', padding='same')(input_layer)
         x = BatchNormalization()(x)
-        x = Conv2D(filters, (3, 3), activation='relu', padding='same')(x)
+        #x = Conv2D(filters, (3, 3), activation='relu', padding='same', kernel_regularizer=regularizers.l2(0.2))(x)
         x = BatchNormalization()(x)
         if x.shape[1] == 15:
             encoded = MaxPooling2D((3, 3))(x)
         else:
             encoded = MaxPooling2D((2, 2))(x)
 
-        encoded = layers.Dropout(rate=0.2)(encoded) # New line
+        #encoded = layers.Dropout(rate=0.5)(encoded) # New line
         return encoded
 
     encoded1 = encoding_block(initial, filters=64)
@@ -65,6 +65,7 @@ def UNN_model(input_shape):
     x = Conv2D(256, kernel_size=(7, 7), activation='relu', padding='same')(encoded3)
     x = BatchNormalization()(x)
     x = Conv2D(256, kernel_size=(7, 7), activation='relu', padding='same')(x)
+    #x = layers.Dropout(rate=0.5)(x) # New line
     x = BatchNormalization()(x)
 
     # Decoding Blocks
@@ -75,8 +76,9 @@ def UNN_model(input_shape):
         else:
             x = Conv2DTranspose(filters, (2, 2), strides=(2,2), activation='relu', padding='same')(x)
         x = BatchNormalization()(x)
-        x = Conv2D(filters, (3, 3), activation='relu', padding='same')(x)
+        #x = Conv2D(filters, (3, 3), activation='relu', padding='same', kernel_regularizer=regularizers.l2(0.2))(x)
         x = BatchNormalization()(x)
+        #x = layers.Dropout(rate=0.5)(x) # New line
         return x
 
     decoded1 = decoding_block(x, encoded3, filters=128)
@@ -87,7 +89,8 @@ def UNN_model(input_shape):
     x = concatenate([decoded3, initial], axis=-1)
     x = Conv2D(32, kernel_size=(7, 7), activation='relu', padding='same')(x)
     x = BatchNormalization()(x)
-    x = Conv2D(32, kernel_size=(7, 7), activation='relu', padding='same')(x)
+    #x = Conv2D(32, kernel_size=(7, 7), activation='relu', padding='same', kernel_regularizer=regularizers.l2(0.2))(x)
+    #x = layers.Dropout(rate=0.5)(x) # New line
     x = BatchNormalization()(x)
 
     # Output layer with Sigmoid activation for binary classification
