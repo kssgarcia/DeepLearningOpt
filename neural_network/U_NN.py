@@ -55,7 +55,7 @@ if np.any((output_val > 0) & (output_val < 1)):
 else:
     print("output_val does not have elements between 0 and 1")
 
-test_n = 1
+test_n = 2
 
 checkpoint_callback = keras.callbacks.ModelCheckpoint(
     f"./best_unn_grokking_{test_n}/cp.ckpt",
