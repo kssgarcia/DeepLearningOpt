@@ -41,8 +41,8 @@ for i in range(batch_size):
     input_data[i, :, :, 3] = load_y[i].reshape((61,61))
 output_data = x.reshape((x.shape[0], 60, 60))
 
-input_train = input_data[-1000:]
-output_train = output_data[-1000:]
+input_train = input_data[:1000]
+output_train = output_data[:1000]
 
 input_val = input_data[-100:]
 output_val = output_data[-100:]
@@ -239,11 +239,11 @@ transformer_units = [
 ]
 transformer_layers = 4
 
-torch.set_float32_matmul_precision('high')
+# torch.set_float32_matmul_precision('high')
 
 model = HybridModel(patch_size, projection_dim, num_heads, transformer_units, transformer_layers).to(device)
-# model = torch.compile(model)
-model.load_state_dict(torch.load("./plots/pytorch_1/hybrid_1.pt"))
+model = torch.compile(model)
+# model.load_state_dict(torch.load("./plots/pytorch_1/hybrid_1.pt"))
 
 # %% Train Model
 
@@ -253,7 +253,7 @@ lr=1e-3
 optimizer = optim.Adam(model.parameters(), lr=lr)
 
 # Training loop
-epochs = 20
+epochs = 50
 train_losses = []
 val_losses = []
 train_accuracies = []
