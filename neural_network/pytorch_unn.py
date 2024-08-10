@@ -1,3 +1,4 @@
+# %%
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -81,45 +82,91 @@ val_dataset = CustomDataset(input_val, output_val)
 train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=16, shuffle=False)
 
+# %% Training the model
+
+class EncodingBlock(nn.Module):
+    def __init__(self, filters_input, filters, stride):
+        super(EncodingBlock, self).__init__()
+        self.conv1 = nn.Conv2d(filters_input, filters, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(filters, filters, kernel_size=3, padding=1)
+        self.batchnorm1 = nn.BatchNorm2d(filters)
+        self.batchnorm2 = nn.BatchNorm2d(filters)
+        self.dropout = nn.Dropout(0.1)
+        self.pool = nn.MaxPool2d(kernel_size=stride) if stride > 1 else nn.Identity()
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.batchnorm1(x)
+        x = torch.relu(x)
+        x = self.conv2(x)
+        x = self.batchnorm2(x)
+        x = torch.relu(x)
+        x = self.dropout(x)
+        x = self.pool(x)
+        return x
+
+class DecodingBlockSkip(nn.Module):
+    def __init__(self, filters_input, filters, stride):
+        super(DecodingBlockSkip, self).__init__()
+        total_filters = filters_input + filters  # Adjust this if different
+        self.conv2DTranspose = nn.ConvTranspose2d(total_filters, filters, kernel_size=stride, stride=stride, padding=0)
+        self.conv2D = nn.Conv2d(filters, filters, kernel_size=3, padding=1)
+        self.batchnorm1 = nn.BatchNorm2d(filters)
+        self.batchnorm2 = nn.BatchNorm2d(filters)
+        self.dropout = nn.Dropout(0.1)
+
+    def forward(self, x, concat_layer):
+        x = torch.cat([x, concat_layer], dim=1)
+        x = self.conv2DTranspose(x)
+        x = torch.relu(x)
+        x = self.batchnorm1(x)
+        x = self.conv2D(x)
+        x = torch.relu(x)
+        x = self.batchnorm2(x)
+        x = self.dropout(x)
+        return x
+
 class UNN_Model(nn.Module):
     def __init__(self):
         super(UNN_Model, self).__init__()
 
         # Initial Convolution
-        self.initial_conv = nn.Conv2d(4, 32, kernel_size=(2, 2), padding=0)
-        self.initial_bn = nn.BatchNorm2d(32)
+        self.initial = nn.Sequential(
+            nn.Conv2d(4, 32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
+            nn.ReLU(),
+            nn.Conv2d(32, 32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
+            nn.ReLU()
+        )
 
         # Encoding Blocks
-        self.enc_block1 = self.encoding_block(32, 64)
-        self.enc_block2 = self.encoding_block(64, 128)
-        self.enc_block3 = self.encoding_block(128, 256)
+        self.encoded1 = EncodingBlock(32, 64, 2)
+        self.encoded2 = EncodingBlock(64, 128, 2)
+        self.encoded3 = EncodingBlock(128, 256, 3)
 
         # Additional Convolution Layers for Feature Maps
-        self.additional_conv1 = nn.Conv2d(256, 256, kernel_size=(7, 7), padding=3)
-        self.additional_bn1 = nn.BatchNorm2d(256)
-        self.additional_conv2 = nn.Conv2d(256, 256, kernel_size=(7, 7), padding=3)
-        self.additional_bn2 = nn.BatchNorm2d(256)
+        self.bottle_conv1 = nn.Conv2d(256, 256, kernel_size=(7, 7), padding=3)
+        self.bottle_bn1 = nn.BatchNorm2d(256)
+        self.bottle_conv2 = nn.Conv2d(256, 256, kernel_size=(7, 7), padding=3)
+        self.bottle_bn2 = nn.BatchNorm2d(256)
 
         # Decoding Blocks
-        self.dec_block1 = self.decoding_block(256, 256, 128)
-        self.dec_block2 = self.decoding_block(128, 128, 64)
-        self.dec_block3 = self.decoding_block(64, 64, 32)
+        self.decoded1 = DecodingBlockSkip(256, 256, 3)
+        self.decoded2 = DecodingBlockSkip(256, 128, 2)
+        self.decoded3 = DecodingBlockSkip(128, 64, 2)
 
         # Final Convolution
-        self.final_conv1 = nn.Conv2d(64, 32, kernel_size=(7, 7), padding=3)
-        self.final_bn1 = nn.BatchNorm2d(32)
-        self.final_conv2 = nn.Conv2d(32, 1, kernel_size=(1, 1))
-    
-    def encoding_block(self, in_channels, out_channels):
-        layers = []
-        layers.append(nn.Conv2d(in_channels, out_channels, kernel_size=(3, 3), padding=1))
-        layers.append(nn.BatchNorm2d(out_channels))
-        layers.append(nn.ReLU(inplace=True))
-        layers.append(nn.Conv2d(out_channels, out_channels, kernel_size=(3, 3), padding=1))
-        layers.append(nn.BatchNorm2d(out_channels))
-        layers.append(nn.ReLU(inplace=True))
-        return nn.Sequential(*layers)
-    
+        self.last = nn.Sequential(
+            nn.Conv2d(64, 32, kernel_size=3, padding=1),  # Reduced to 32 filters, kernel size to 3
+            nn.BatchNorm2d(32),
+            nn.ReLU(),
+            nn.Conv2d(32, 16, kernel_size=3, padding=1),  # Reduced to 16 filters, kernel size to 3
+            nn.BatchNorm2d(16),
+            nn.ReLU()
+        )
+        self.output_tensor = nn.Conv2d(16, 1, kernel_size=3, padding=1)
+        
     def decoding_block(self, in_channels, concat_channels, out_channels):
         layers = []
         layers.append(nn.ConvTranspose2d(in_channels + concat_channels, out_channels, kernel_size=(3, 3), stride=2, padding=1, output_padding=1))
@@ -128,42 +175,39 @@ class UNN_Model(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
+        
         # Initial Convolution
-        initial = self.initial_bn(F.relu(self.initial_conv(x)))
+        initial = self.initial(x)
 
         # Encoding Path
-        encoded1 = F.max_pool2d(self.enc_block1(initial), 2)
-        encoded2 = F.max_pool2d(self.enc_block2(encoded1), 2)
-        encoded3 = F.max_pool2d(self.enc_block3(encoded2), 2)
+        encoded1 = self.encoded1(initial)
+        encoded2 = self.encoded2(encoded1)
+        encoded3 = self.encoded3(encoded2)
 
-        # Additional Convolution Layers for Feature Maps
-        x = self.additional_bn1(F.relu(self.additional_conv1(encoded3)))
-        x = self.additional_bn2(F.relu(self.additional_conv2(x)))
+        # bottle Convolution Layers for Feature Maps
+        x = self.bottle_bn1(F.relu(self.bottle_conv1(encoded3)))
+        x = self.bottle_bn2(F.relu(self.bottle_conv2(x)))
 
         # Decoding Path
-        decoded1 = self.dec_block1(x)
-        decoded2 = self.dec_block2(decoded1)
-        decoded3 = self.dec_block3(decoded2)
+        x = self.decoded1(x, encoded3)
+        x = self.decoded2(x, encoded2)
+        x = self.decoded3(x, encoded1)
+        x = self.last(x)
+        x = self.output_tensor(x)
+        
+        return x
 
-        # Final Convolution
-        x = self.final_bn1(F.relu(self.final_conv1(decoded3)))
-        output_tensor = torch.sigmoid(self.final_conv2(x))
+model = UNN_Model().to(device)
 
-        return output_tensor
-
-# Instantiate the model
-model = UNN_Model()
-print(model)
-
-# %% Train Model
+test_n = 1
 
 # Optimizer and loss function
-criterion = nn.BCEWithLogitsLoss()
 lr=1e-3
+criterion = nn.BCEWithLogitsLoss()
 optimizer = optim.Adam(model.parameters(), lr=lr)
 
 # Training loop
-epochs = 100
+epochs = 8000
 train_losses = []
 val_losses = []
 train_accuracies = []
@@ -180,12 +224,18 @@ for epoch in range(epochs):
     for inputs, targets in train_loader:
         inputs, targets = inputs.to(device), targets.to(device)
         optimizer.zero_grad()
+
+        # Forward pass
         outputs = model(inputs)
         loss = criterion(outputs, targets)
+
+        # Backward pass
         loss.backward()
         optimizer.step()
         
         train_loss += loss.item() * inputs.size(0)
+
+        # Calculate accuracy
         predicted = (outputs > 0.5).float()
         train_correct += (predicted == targets).sum().item()
         total_train += targets.numel()
@@ -221,7 +271,7 @@ for epoch in range(epochs):
     print(f'Epoch {epoch+1}/{epochs} | Train Loss: {train_loss/total_train:.4f} | Val Loss: {val_loss/total_val:.4f} | Train Acc: {train_correct/total_train:.4f} | Val Acc: {val_correct/total_val:.4f} | Time: {dt:.2f}ms')
 
 # Save the model
-torch.save(model.state_dict(), f"./plots_loss/hybrid_{test_n}.pt")
+torch.save(model.state_dict(), f"./plots_loss/unn_{test_n}.pt")
 
 # Plotting training and validation loss
 plt.figure(figsize=(10, 6))
@@ -231,7 +281,7 @@ plt.title('Training and Validation Loss')
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
 plt.legend()
-plt.savefig(f"plots_loss/loss_hybrid_{test_n}.png")  # Save the plot as an image
+plt.savefig(f"plots_loss/loss_unn_{test_n}.png")  # Save the plot as an image
 plt.show()
 
 # Plotting training and validation accuracy
@@ -242,7 +292,7 @@ plt.title('Training and Validation Accuracy')
 plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
 plt.legend()
-plt.savefig(f"plots_loss/accuracy_hybrid_{test_n}.png")  # Save the plot as an image
+plt.savefig(f"plots_loss/accuracy_unn_{test_n}.png")  # Save the plot as an image
 
 # %% Eval Model
 
@@ -266,7 +316,7 @@ ax[1].set_title('Expected')
 ax[1].set_xticks([])
 ax[1].set_yticks([])
 plt.show()
-plt.savefig(f"plots_loss/hybrid_{test_n}.png")  # Save the plot as an image
+plt.savefig(f"plots_loss/unn_{test_n}.png")  # Save the plot as an image
 
 # %% Plotting the output paramets
 
