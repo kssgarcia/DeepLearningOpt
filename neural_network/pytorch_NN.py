@@ -242,7 +242,7 @@ transformer_layers = 4
 # torch.set_float32_matmul_precision('high')
 
 model = HybridModel(patch_size, projection_dim, num_heads, transformer_units, transformer_layers).to(device)
-model = torch.compile(model)
+# model = torch.compile(model)
 # model.load_state_dict(torch.load("./plots/pytorch_1/hybrid_1.pt"))
 
 # %% Train Model
@@ -253,7 +253,7 @@ lr=1e-3
 optimizer = optim.Adam(model.parameters(), lr=lr)
 
 # Training loop
-epochs = 50
+epochs = 100
 train_losses = []
 val_losses = []
 train_accuracies = []

@@ -81,7 +81,7 @@ adam_optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule)
 
 model = UNN_model((61,61,num_channels))
 model.compile(optimizer=adam_optimizer, loss='binary_crossentropy', metrics=['accuracy', tf.keras.metrics.MeanAbsoluteError()])
-history = model.fit(input_train, output_train, epochs=4000, batch_size=32, validation_data=[input_val, output_val], callbacks=[checkpoint_callback])
+history = model.fit(input_train, output_train, epochs=8000, batch_size=32, validation_data=[input_val, output_val], callbacks=[checkpoint_callback])
 #history = model.fit(input_val, output_val, epochs=200, batch_size=10, validation_split=0.2, callbacks=[checkpoint_callback])
 
 model.save(f"./model_unn_grokking_{test_n}")
