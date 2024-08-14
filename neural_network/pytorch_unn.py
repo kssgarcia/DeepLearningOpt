@@ -8,9 +8,19 @@ import matplotlib.pyplot as plt
 import numpy as np
 import logging
 import time
+from matplotlib import colors
+import os
+from grokfast import gradfilter_ema
+
+test_n = 4
+
+# Check if the directory exists, if not create it
+directory = f"./plots_pytorch/unn/test_{test_n}/"
+if not os.path.exists(directory):
+    os.makedirs(directory)
 
 # Setup logging
-logging.basicConfig(filename='./plots_loss/training.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(filename=f'./plots_pytorch/unn/test_{test_n}/training.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Check for GPU
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -62,7 +72,7 @@ output_train = output_train[:, np.newaxis, :, :]
 output_val = output_val[:, np.newaxis, :, :]
 
 class CustomDataset(Dataset):
-    def __init__(self, inputs, targets):
+    def __init__(self, inputs: np.ndarray, targets: np.ndarray):
         # Ensure input tensors are properly formatted for PyTorch: batch_size, channels, height, width
         self.inputs = torch.tensor(inputs, dtype=torch.float32).permute(0, 3, 1, 2)
         # No permutation needed for targets because the new axis for channel is already in the correct place
@@ -85,7 +95,7 @@ val_loader = DataLoader(val_dataset, batch_size=16, shuffle=False)
 # %% Training the model
 
 class EncodingBlock(nn.Module):
-    def __init__(self, filters_input, filters, stride):
+    def __init__(self, filters_input: int, filters: int, stride: int):
         super(EncodingBlock, self).__init__()
         self.conv1 = nn.Conv2d(filters_input, filters, kernel_size=3, padding=1)
         self.conv2 = nn.Conv2d(filters, filters, kernel_size=3, padding=1)
@@ -94,7 +104,7 @@ class EncodingBlock(nn.Module):
         self.dropout = nn.Dropout(0.1)
         self.pool = nn.MaxPool2d(kernel_size=stride) if stride > 1 else nn.Identity()
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.conv1(x)
         x = self.batchnorm1(x)
         x = torch.relu(x)
@@ -106,7 +116,7 @@ class EncodingBlock(nn.Module):
         return x
 
 class DecodingBlockSkip(nn.Module):
-    def __init__(self, filters_input, filters, stride):
+    def __init__(self, filters_input: int, filters: int, stride: int):
         super(DecodingBlockSkip, self).__init__()
         total_filters = filters_input + filters  # Adjust this if different
         self.conv2DTranspose = nn.ConvTranspose2d(total_filters, filters, kernel_size=stride, stride=stride, padding=0)
@@ -115,7 +125,7 @@ class DecodingBlockSkip(nn.Module):
         self.batchnorm2 = nn.BatchNorm2d(filters)
         self.dropout = nn.Dropout(0.1)
 
-    def forward(self, x, concat_layer):
+    def forward(self, x: torch.Tensor, concat_layer: torch.Tensor) -> torch.Tensor:
         x = torch.cat([x, concat_layer], dim=1)
         x = self.conv2DTranspose(x)
         x = torch.relu(x)
@@ -167,15 +177,7 @@ class UNN_Model(nn.Module):
         )
         self.output_tensor = nn.Conv2d(16, 1, kernel_size=3, padding=1)
         
-    def decoding_block(self, in_channels, concat_channels, out_channels):
-        layers = []
-        layers.append(nn.ConvTranspose2d(in_channels + concat_channels, out_channels, kernel_size=(3, 3), stride=2, padding=1, output_padding=1))
-        layers.append(nn.BatchNorm2d(out_channels))
-        layers.append(nn.ReLU(inplace=True))
-        return nn.Sequential(*layers)
-
-    def forward(self, x):
-        
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         # Initial Convolution
         initial = self.initial(x)
 
@@ -199,21 +201,28 @@ class UNN_Model(nn.Module):
 
 model = UNN_Model().to(device)
 
-test_n = 1
-
 # Optimizer and loss function
-lr=1e-3
+lr = 1e-3
+weight_decay = 1e-4  # Adjust this value as needed
 criterion = nn.BCEWithLogitsLoss()
-optimizer = optim.Adam(model.parameters(), lr=lr)
+optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+
+print(input_train.shape[0])
+decay_steps = (input_train.shape[0] // 32)*5
+print(decay_steps)
+
+# Learning rate scheduler
+scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=decay_steps, gamma=0.9)  # Decays the learning rate by 0.9 every 1000 epochs
 
 # Training loop
-epochs = 8000
+epochs = 1000
 train_losses = []
 val_losses = []
 train_accuracies = []
 val_accuracies = []
 ud = []
 
+grads = None
 for epoch in range(epochs):
     t0 = time.time()
     model.train()
@@ -231,6 +240,7 @@ for epoch in range(epochs):
 
         # Backward pass
         loss.backward()
+        grads = gradfilter_ema(model, grads=grads)
         optimizer.step()
         
         train_loss += loss.item() * inputs.size(0)
@@ -239,6 +249,9 @@ for epoch in range(epochs):
         predicted = (outputs > 0.5).float()
         train_correct += (predicted == targets).sum().item()
         total_train += targets.numel()
+
+    # Update learning rate
+    scheduler.step()
         
     train_losses.append(train_loss / total_train)
     train_accuracies.append(train_correct / total_train)
@@ -271,7 +284,7 @@ for epoch in range(epochs):
     print(f'Epoch {epoch+1}/{epochs} | Train Loss: {train_loss/total_train:.4f} | Val Loss: {val_loss/total_val:.4f} | Train Acc: {train_correct/total_train:.4f} | Val Acc: {val_correct/total_val:.4f} | Time: {dt:.2f}ms')
 
 # Save the model
-torch.save(model.state_dict(), f"./plots_loss/unn_{test_n}.pt")
+torch.save(model.state_dict(), f"./plots_pytorch/unn/test_{test_n}/unn_{test_n}.pt")
 
 # Plotting training and validation loss
 plt.figure(figsize=(10, 6))
@@ -281,7 +294,7 @@ plt.title('Training and Validation Loss')
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
 plt.legend()
-plt.savefig(f"plots_loss/loss_unn_{test_n}.png")  # Save the plot as an image
+plt.savefig(f"plots_pytorch/unn/test_{test_n}/loss_unn_{test_n}.png")  # Save the plot as an image
 plt.show()
 
 # Plotting training and validation accuracy
@@ -292,7 +305,7 @@ plt.title('Training and Validation Accuracy')
 plt.xlabel('Epoch')
 plt.ylabel('Accuracy')
 plt.legend()
-plt.savefig(f"plots_loss/accuracy_unn_{test_n}.png")  # Save the plot as an image
+plt.savefig(f"plots_pytorch/unn/test_{test_n}/accuracy_unn_{test_n}.png")  # Save the plot as an image
 
 # %% Eval Model
 
@@ -316,7 +329,7 @@ ax[1].set_title('Expected')
 ax[1].set_xticks([])
 ax[1].set_yticks([])
 plt.show()
-plt.savefig(f"plots_loss/unn_{test_n}.png")  # Save the plot as an image
+plt.savefig(f"plots_pytorch/unn/test_{test_n}/results_{test_n}.png")  # Save the plot as an image
 
 # %% Plotting the output paramets
 
@@ -328,17 +341,17 @@ for name, param in model.named_parameters():
     if name.split('.')[-1] == "weight":
         if param.requires_grad and param.grad is not None:
             t = param.cpu().detach()
-            if len(t.shape) == 2:
-                print(f'{name}: mean {t.mean():+f}, std {t.std():e}')
-                hy, hx = torch.histogram(t, density=True)
-                plt.plot(hx[:-1].detach(), hy.detach())
-                legends.append(name)
+            print(f'{name}: mean {t.mean():+f}, std {t.std():e}')
+            hy, hx = torch.histogram(t, density=True)
+            plt.plot(hx[:-1].detach(), hy.detach())
+            legends.append(name)
 
 plt.legend(legends)
 plt.title('Weights Distribution')
 plt.xlabel('Gradient value')
 plt.ylabel('Density')
 plt.show()
+plt.savefig(f"plots_pytorch/unn/test_{test_n}/output_parameters_{test_n}.png")  # Save the plot as an image
 
 # %% Plotting the gradients
 
@@ -351,17 +364,18 @@ for name, p in model.named_parameters():
     if name.split('.')[-1] == "weight":
         if p.requires_grad and p.grad is not None:
             t = p.grad.cpu().detach()
-            if p.ndim == 2:
-                print('weight %10s | mean %+f | std %e | grad:data ratio %e' % (tuple(p.shape), t.mean(), t.std(), t.std() / p.std()))
-                hy, hx = torch.histogram(t, density=True)
-                plt.plot(hx[:-1].detach(), hy.detach())
-                legends.append(f'{i} {tuple(p.shape)}')
+            # if p.ndim == 2:
+            print('weight %10s | mean %+f | std %e | grad:data ratio %e' % (tuple(p.shape), t.mean(), t.std(), t.std() / p.std()))
+            hy, hx = torch.histogram(t, density=True)
+            plt.plot(hx[:-1].detach(), hy.detach())
+            legends.append(f'{i} {tuple(p.shape)}')
 
 plt.legend(legends)
 plt.title('Gradient Weights Distribution')
 plt.xlabel('Gradient value')
 plt.ylabel('Density')
 plt.show()
+plt.savefig(f"plots_pytorch/unn/test_{test_n}/gradients_{test_n}.png")
 
 # %% Plotting parameters update ratios
 
@@ -375,3 +389,4 @@ for i,p in enumerate(range(len(ud))):
     legends.append('param %d' % i)
 plt.plot([0, len(ud)], [-3, -3], 'k') # these ratios should be ~1e-3, indicate on plot
 plt.legend(legends);
+plt.savefig(f"plots_pytorch/unn/test_{test_n}/parameters_update_ratios_{test_n}.png")
