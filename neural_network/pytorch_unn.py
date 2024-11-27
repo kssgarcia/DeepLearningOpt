@@ -199,7 +199,39 @@ class UNN_Model(nn.Module):
         
         return x
 
+activations = {}
+
+def activation_hook(name):
+    def hook(module, input, output):
+        # Store the activation output under the layer name
+        activations[name] = output.detach()
+    return hook
+
+
 model = UNN_Model().to(device)
+
+# Register hooks for encoding layers
+model.encoded1.conv1.register_forward_hook(activation_hook('encoded1.conv1'))
+model.encoded1.conv2.register_forward_hook(activation_hook('encoded1.conv2'))
+model.encoded2.conv1.register_forward_hook(activation_hook('encoded2.conv1'))
+model.encoded2.conv2.register_forward_hook(activation_hook('encoded2.conv2'))
+model.encoded3.conv1.register_forward_hook(activation_hook('encoded3.conv1'))
+model.encoded3.conv2.register_forward_hook(activation_hook('encoded3.conv2'))
+
+# Register hooks for bottleneck layers
+model.bottle_conv1.register_forward_hook(activation_hook('bottle_conv1'))
+model.bottle_conv2.register_forward_hook(activation_hook('bottle_conv2'))
+
+# Register hooks for decoding layers
+model.decoded1.conv2D.register_forward_hook(activation_hook('decoded1.conv2D'))
+model.decoded2.conv2D.register_forward_hook(activation_hook('decoded2.conv2D'))
+model.decoded3.conv2D.register_forward_hook(activation_hook('decoded3.conv2D'))
+
+# Register hooks for the initial and final layers
+model.initial[0].register_forward_hook(activation_hook('initial.conv1'))
+model.initial[3].register_forward_hook(activation_hook('initial.conv2'))
+model.last[0].register_forward_hook(activation_hook('last.conv1'))
+model.last[3].register_forward_hook(activation_hook('last.conv2'))
 
 # Optimizer and loss function
 lr = 1e-3
@@ -207,20 +239,19 @@ weight_decay = 1e-4  # Adjust this value as needed
 criterion = nn.BCEWithLogitsLoss()
 optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
 
-print(input_train.shape[0])
 decay_steps = (input_train.shape[0] // 32)*5
-print(decay_steps)
 
 # Learning rate scheduler
 scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=decay_steps, gamma=0.9)  # Decays the learning rate by 0.9 every 1000 epochs
 
 # Training loop
-epochs = 1000
+epochs = 10
 train_losses = []
 val_losses = []
 train_accuracies = []
 val_accuracies = []
 ud = []
+activation_stats = {layer: {"mean": [], "std": []} for layer in activations.keys()}
 
 grads = None
 for epoch in range(epochs):
@@ -249,6 +280,11 @@ for epoch in range(epochs):
         predicted = (outputs > 0.5).float()
         train_correct += (predicted == targets).sum().item()
         total_train += targets.numel()
+
+        # Capture activation statistics for this batch
+        for layer_name, activation in activations.items():
+            activation_stats[layer_name]["mean"].append(activation.mean().item())
+            activation_stats[layer_name]["std"].append(activation.std().item())
 
     # Update learning rate
     scheduler.step()
@@ -360,12 +396,11 @@ legends = []
 
 # Iterate over each parameter and plot its gradient
 for name, p in model.named_parameters():
-    print(name)
     if name.split('.')[-1] == "weight":
         if p.requires_grad and p.grad is not None:
             t = p.grad.cpu().detach()
             # if p.ndim == 2:
-            print('weight %10s | mean %+f | std %e | grad:data ratio %e' % (tuple(p.shape), t.mean(), t.std(), t.std() / p.std()))
+            print(f'{name} weight shape {list(p.shape)} | mean {t.mean():+f} | std {t.std():e} | grad:data ratio {t.std() / p.std():e}')
             hy, hx = torch.histogram(t, density=True)
             plt.plot(hx[:-1].detach(), hy.detach())
             legends.append(f'{i} {tuple(p.shape)}')
@@ -390,3 +425,29 @@ for i,p in enumerate(range(len(ud))):
 plt.plot([0, len(ud)], [-3, -3], 'k') # these ratios should be ~1e-3, indicate on plot
 plt.legend(legends);
 plt.savefig(f"plots_pytorch/unn/test_{test_n}/parameters_update_ratios_{test_n}.png")
+
+# %% Plot activation statistics after training
+for layer_name, stats in activation_stats.items():
+    epochs_range = range(1, epochs + 1)
+
+    # Plot mean of activations over epochs
+    plt.figure(figsize=(10, 4))
+    plt.plot(epochs_range, stats["mean"], label=f'{layer_name} Mean')
+    plt.title(f'Activation Mean Over Epochs - {layer_name}')
+    plt.xlabel('Epoch')
+    plt.ylabel('Mean')
+    plt.legend()
+    plt.grid(True)
+    plt.savefig(f'activation_mean_{layer_name}.png')
+    plt.show()
+
+    # Plot std of activations over epochs
+    plt.figure(figsize=(10, 4))
+    plt.plot(epochs_range, stats["std"], label=f'{layer_name} Std', color='orange')
+    plt.title(f'Activation Std Over Epochs - {layer_name}')
+    plt.xlabel('Epoch')
+    plt.ylabel('Std')
+    plt.legend()
+    plt.grid(True)
+    plt.savefig(f'activation_std_{layer_name}.png')
+    plt.show()
